@@ -45,6 +45,7 @@ from rdp_workflow.models import (
     CanonicalScopeEntry,
     CanonicalSystemBoundaries,
     CapabilityValue,
+    ConvergenceResult,
     Decision,
     DecisionOption,
     DomainView,
@@ -580,22 +581,108 @@ def test_audit_result_strictly_ties_each_outcome_to_its_allowed_payload() -> Non
             AuditResult.model_validate(values)
 
 
-def test_final_canonical_path_exposes_only_done_canonical_file(tmp_path: Path) -> None:
+def _terminal_run(document: CanonicalRDP | None = None) -> WorkflowRun:
+    return WorkflowRun(
+        run_id="run-1",
+        state=WorkflowState.DONE,
+        convergence_result=ConvergenceResult(status="PASS"),
+        canonical_candidate=document or canonical_document(),
+        audit_result=AuditResult(status="PASS"),
+    )
+
+
+def test_final_canonical_path_exposes_only_valid_done_canonical_file(
+    tmp_path: Path,
+) -> None:
     run_dir = tmp_path / "run-1"
     run_dir.mkdir()
+    run = _terminal_run()
     expected = run_dir / "canonical-rdp.md"
-    expected.write_text("# Canonical RDP\n", encoding="utf-8")
-    (run_dir / "run.json").write_text("{}", encoding="utf-8")
+    expected.write_text(render_markdown(run.canonical_candidate), encoding="utf-8")
 
     with pytest.raises(ValueError, match="only for a DONE run"):
         final_canonical_path(
-            WorkflowRun(run_id="run-1", state=WorkflowState.CANONICALIZATION),
+            run.model_copy(update={"state": WorkflowState.CANONICALIZATION}),
             run_dir,
         )
 
-    assert (
-        final_canonical_path(
-            WorkflowRun(run_id="run-1", state=WorkflowState.DONE), run_dir
+    assert final_canonical_path(run, run_dir) == expected
+
+
+@pytest.mark.parametrize("artifact_state", ("missing", "mutated"))
+def test_final_canonical_path_rejects_missing_or_mutated_artifact(
+    tmp_path: Path, artifact_state: str
+) -> None:
+    run_dir = tmp_path / "run-1"
+    run_dir.mkdir()
+    run = _terminal_run()
+    path = run_dir / "canonical-rdp.md"
+    if artifact_state == "mutated":
+        path.write_text(
+            render_markdown(run.canonical_candidate) + "\nChanged.\n",
+            encoding="utf-8",
         )
-        == expected
+
+    with pytest.raises((FileNotFoundError, ValueError)):
+        final_canonical_path(run, run_dir)
+
+
+@pytest.mark.parametrize("missing_gate", ("convergence", "candidate", "audit"))
+def test_final_canonical_path_rejects_missing_terminal_gate(
+    tmp_path: Path, missing_gate: str
+) -> None:
+    run_dir = tmp_path / "run-1"
+    run_dir.mkdir()
+    run = _terminal_run()
+    (run_dir / "canonical-rdp.md").write_text(
+        render_markdown(run.canonical_candidate), encoding="utf-8"
     )
+    if missing_gate == "convergence":
+        run.convergence_result = None
+    elif missing_gate == "candidate":
+        run.canonical_candidate = None
+    else:
+        run.audit_result = None
+
+    with pytest.raises(ValueError, match="DONE run"):
+        final_canonical_path(run, run_dir)
+
+
+def test_final_canonical_path_rejects_nonpassing_terminal_results(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "run-1"
+    run_dir.mkdir()
+    run = _terminal_run()
+    (run_dir / "canonical-rdp.md").write_text(
+        render_markdown(run.canonical_candidate), encoding="utf-8"
+    )
+    run.convergence_result = ConvergenceResult(
+        status="FAIL", findings=("Remodel.",), remediation="REMODEL"
+    )
+
+    with pytest.raises(ValueError, match="Convergence PASS"):
+        final_canonical_path(run, run_dir)
+
+    run.convergence_result = ConvergenceResult(status="PASS")
+    run.audit_result = AuditResult(
+        status="FAIL", findings=("Edit.",), remediation="EDITORIAL"
+    )
+    with pytest.raises(ValueError, match="Audit PASS"):
+        final_canonical_path(run, run_dir)
+
+
+def test_final_canonical_path_rejects_contract_invalid_candidate(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "run-1"
+    run_dir.mkdir()
+    invalid = canonical_document().model_copy(deep=True)
+    invalid.product_definition.goals = ()
+    run = _terminal_run(invalid)
+    (run_dir / "canonical-rdp.md").write_text(
+        render_markdown(invalid), encoding="utf-8"
+    )
+
+    with pytest.raises(ValueError, match="contract-invalid"):
+        final_canonical_path(run, run_dir)

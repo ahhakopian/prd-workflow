@@ -417,6 +417,13 @@ A material audit finding MUST NOT be repaired solely by rewriting Canonical RDP 
 
 `BLOCKED` is used when the workflow cannot make valid progress.
 
+Invalid Source PRD input detected before a run is created is a command/input
+error, not a workflow state. Missing, unreadable, truncated, or invalid
+`run.json` is an out-of-band storage error because no trusted aggregate exists
+to transition. Structural corruption detected after a parseable run has been
+created, including failure of the immutable Source PRD integrity check, MAY
+transition that trusted active run to `BLOCKED`.
+
 Examples include:
 
 - the Source PRD is fundamentally insufficient to determine even the intended product;

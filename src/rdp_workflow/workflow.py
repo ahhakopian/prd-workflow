@@ -14,7 +14,7 @@ from rdp_workflow.canonical import (
 )
 from rdp_workflow.decisions import accept_answer, active_authority
 from rdp_workflow.models import HumanAnswer, WorkflowRun, WorkflowState
-from rdp_workflow.storage import FileStorage
+from rdp_workflow.storage import FileStorage, SourceIntegrityError
 
 
 _LEGAL_TRANSITIONS: dict[WorkflowState, frozenset[WorkflowState]] = {
@@ -91,14 +91,28 @@ class WorkflowService:
 
     def advance(self, run_id: str) -> WorkflowRun:
         run = self.storage.load_run(run_id)
+        invariant_failure = _controlling_invariant_failure(run)
+        if invariant_failure is not None:
+            return self._block(run, invariant_failure)
+
+        source_text: str | None = None
+        if run.state in {
+            WorkflowState.INTAKE,
+            WorkflowState.MODELING,
+            WorkflowState.CANONICALIZATION,
+        }:
+            try:
+                source_text = self.storage.load_source(run)
+            except SourceIntegrityError as exc:
+                return self._block(run, str(exc))
 
         match run.state:
             case WorkflowState.INTAKE:
-                return self._advance_intake(run)
+                return self._advance_intake(run, source_text)
             case WorkflowState.MODELING:
-                return self._advance_modeling(run)
+                return self._advance_modeling(run, source_text)
             case WorkflowState.CANONICALIZATION:
-                return self._advance_canonicalization(run)
+                return self._advance_canonicalization(run, source_text)
             case WorkflowState.WAITING_HUMAN:
                 raise ValueError("workflow is waiting for the current Human Decision")
             case _:
@@ -113,6 +127,10 @@ class WorkflowService:
         answer: HumanAnswer,
     ) -> WorkflowRun:
         run = self.storage.load_run(run_id)
+        invariant_failure = _controlling_invariant_failure(run)
+        if run.state is WorkflowState.WAITING_HUMAN and invariant_failure is not None:
+            self._block(run, invariant_failure)
+            raise ValueError(invariant_failure)
         origin = run.pending_decision_origin
 
         accept_answer(run, decision_id, answer)
@@ -133,14 +151,8 @@ class WorkflowService:
     def status(self, run_id: str) -> WorkflowRun:
         return self.storage.load_run(run_id)
 
-    def _advance_intake(self, run: WorkflowRun) -> WorkflowRun:
-        if any(
-            decision.classification == "MATERIAL" and decision.status == "PENDING"
-            for decision in run.decisions
-        ):
-            raise ValueError("INTAKE cannot advance with an existing pending Decision")
-
-        authority = active_authority(run, self.storage.load_source(run.run_id))
+    def _advance_intake(self, run: WorkflowRun, source_text: str) -> WorkflowRun:
+        authority = active_authority(run, source_text)
         decision = analyze_intake(authority, self.ai)
         if decision is None:
             transition(run, WorkflowState.MODELING)
@@ -157,14 +169,8 @@ class WorkflowService:
         self.storage.save_run(run)
         return run
 
-    def _advance_modeling(self, run: WorkflowRun) -> WorkflowRun:
-        if any(
-            decision.classification == "MATERIAL" and decision.status == "PENDING"
-            for decision in run.decisions
-        ):
-            raise ValueError("MODELING cannot advance with an existing pending Decision")
-
-        authority = active_authority(run, self.storage.load_source(run.run_id))
+    def _advance_modeling(self, run: WorkflowRun, source_text: str) -> WorkflowRun:
+        authority = active_authority(run, source_text)
         prior_findings = (
             run.convergence_result.findings
             if run.convergence_result is not None
@@ -199,22 +205,10 @@ class WorkflowService:
         self.storage.save_run(run)
         return run
 
-    def _advance_canonicalization(self, run: WorkflowRun) -> WorkflowRun:
-        if any(
-            decision.classification == "MATERIAL" and decision.status == "PENDING"
-            for decision in run.decisions
-        ):
-            raise ValueError(
-                "CANONICALIZATION cannot advance with an existing pending Decision"
-            )
-        if run.modeling_result is None or run.convergence_result is None:
-            raise ValueError(
-                "CANONICALIZATION requires a complete converged ModelingResult"
-            )
-        if run.convergence_result.status != "PASS":
-            raise ValueError("CANONICALIZATION requires Convergence PASS")
-
-        authority = active_authority(run, self.storage.load_source(run.run_id))
+    def _advance_canonicalization(
+        self, run: WorkflowRun, source_text: str
+    ) -> WorkflowRun:
+        authority = active_authority(run, source_text)
         document = compose_canonical(
             authority,
             run.modeling_result,
@@ -274,3 +268,39 @@ class WorkflowService:
 
         self.storage.save_run(run)
         return run
+
+    def _block(self, run: WorkflowRun, diagnostic: str) -> WorkflowRun:
+        run.diagnostics = (diagnostic,)
+        transition(run, WorkflowState.BLOCKED)
+        self.storage.save_run(run)
+        return run
+
+
+def _controlling_invariant_failure(run: WorkflowRun) -> str | None:
+    pending = tuple(
+        decision
+        for decision in run.decisions
+        if decision.classification == "MATERIAL" and decision.status == "PENDING"
+    )
+    if run.state is WorkflowState.INTAKE and pending:
+        return "INTAKE cannot execute with a pending MATERIAL Decision."
+    if run.state is WorkflowState.WAITING_HUMAN:
+        if len(pending) != 1:
+            return "WAITING_HUMAN requires exactly one pending MATERIAL Decision."
+        if run.pending_decision_origin is not pending[0].origin_state:
+            return (
+                "WAITING_HUMAN pending_decision_origin must match the pending "
+                "MATERIAL Decision origin_state."
+            )
+    if run.state is WorkflowState.MODELING and pending:
+        return "MODELING cannot execute with a pending MATERIAL Decision."
+    if run.state is WorkflowState.CANONICALIZATION:
+        if pending:
+            return "CANONICALIZATION cannot execute with a pending MATERIAL Decision."
+        if run.modeling_result is None:
+            return "CANONICALIZATION requires a complete ModelingResult."
+        if run.convergence_result is None:
+            return "CANONICALIZATION requires a ConvergenceResult."
+        if run.convergence_result.status != "PASS":
+            return "CANONICALIZATION requires Convergence PASS."
+    return None

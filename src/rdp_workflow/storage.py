@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import tempfile
 from pathlib import Path
 from uuid import uuid4
 
 from rdp_workflow.models import WorkflowRun
+
+
+class SourceIntegrityError(ValueError):
+    """Raised when a persisted run's immutable Source PRD is unusable."""
 
 
 class FileStorage:
@@ -31,7 +36,10 @@ class FileStorage:
         if not source_text.strip():
             raise ValueError("Source PRD must not be empty")
 
-        new_run = WorkflowRun(run_id=run_id or str(uuid4()))
+        new_run = WorkflowRun(
+            run_id=run_id or str(uuid4()),
+            source_prd_sha256=hashlib.sha256(source_bytes).hexdigest(),
+        )
         run_dir = self._run_dir(new_run.run_id)
         run_dir.mkdir(parents=True, exist_ok=False)
         (run_dir / "source-prd.md").write_bytes(source_bytes)
@@ -47,10 +55,37 @@ class FileStorage:
             )
         return run
 
-    def load_source(self, run_id: str) -> str:
-        """Load the unchanged UTF-8 Source PRD for a persisted run."""
+    def load_source(self, run: WorkflowRun | str) -> str:
+        """Load and verify the immutable UTF-8 Source PRD for a persisted run."""
 
-        return (self._run_dir(run_id) / "source-prd.md").read_bytes().decode("utf-8")
+        trusted_run = self.load_run(run) if isinstance(run, str) else run
+        source_path = self._run_dir(trusted_run.run_id) / "source-prd.md"
+        try:
+            source_bytes = source_path.read_bytes()
+        except FileNotFoundError as exc:
+            raise SourceIntegrityError(
+                f"Source PRD integrity failure: source-prd.md is missing for run "
+                f"{trusted_run.run_id!r}"
+            ) from exc
+        except OSError as exc:
+            raise SourceIntegrityError(
+                f"Source PRD integrity failure: source-prd.md cannot be read for "
+                f"run {trusted_run.run_id!r}: {exc}"
+            ) from exc
+
+        actual_digest = hashlib.sha256(source_bytes).hexdigest()
+        if actual_digest != trusted_run.source_prd_sha256:
+            raise SourceIntegrityError(
+                f"Source PRD integrity failure: source-prd.md bytes do not match "
+                f"the persisted SHA-256 for run {trusted_run.run_id!r}"
+            )
+        try:
+            return source_bytes.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise SourceIntegrityError(
+                f"Source PRD integrity failure: source-prd.md is not valid UTF-8 "
+                f"for run {trusted_run.run_id!r}"
+            ) from exc
 
     def save_run(self, run: WorkflowRun) -> None:
         run_dir = self._run_dir(run.run_id)

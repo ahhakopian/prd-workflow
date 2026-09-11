@@ -43,7 +43,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif arguments.command == "advance":
             _print_advance(service.advance(arguments.run_id))
         elif arguments.command == "status":
-            _print_status(service.status(arguments.run_id))
+            _print_status(service.status(arguments.run_id), storage)
         elif arguments.command == "answer":
             if arguments.custom is not None:
                 answer = CustomAnswer(text=arguments.custom)
@@ -121,7 +121,7 @@ def _print_advance(run: WorkflowRun) -> None:
     _print_next_action(run)
 
 
-def _print_status(run: WorkflowRun) -> None:
+def _print_status(run: WorkflowRun, storage: FileStorage) -> None:
     pending = _pending_decision(run)
     print(f"run_id: {run.run_id}")
     print(f"state: {run.state.value}")
@@ -130,7 +130,12 @@ def _print_status(run: WorkflowRun) -> None:
     if pending is not None:
         _print_decision(pending)
     if run.state is WorkflowState.DONE:
-        print("canonical_available: yes")
+        try:
+            final_canonical_path(run, storage.run_directory(run.run_id))
+        except (OSError, ValueError):
+            print("canonical_available: no")
+        else:
+            print("canonical_available: yes")
     _print_next_action(run)
 
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -51,8 +53,12 @@ def test_run_starts_in_intake_and_source_is_copied_unchanged(tmp_path: Path) -> 
     run = storage.create_run(source)
 
     assert run.state is WorkflowState.INTAKE
+    assert run.source_prd_sha256 == hashlib.sha256(source_bytes).hexdigest()
     assert (storage.run_directory(run.run_id) / "source-prd.md").read_bytes() == source_bytes
-    assert (storage.run_directory(run.run_id) / "run.json").is_file()
+    run_json = storage.run_directory(run.run_id) / "run.json"
+    assert json.loads(run_json.read_text(encoding="utf-8"))["source_prd_sha256"] == (
+        hashlib.sha256(source_bytes).hexdigest()
+    )
 
 
 def test_load_source_preserves_exact_source_text(tmp_path: Path) -> None:

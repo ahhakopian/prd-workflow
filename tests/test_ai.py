@@ -60,25 +60,95 @@ def test_codex_adapter_requests_strict_schema_and_validates_final_output(
     assert len(observed["schema"]["oneOf"]) == 3
 
 
-def test_codex_adapter_rejects_output_that_does_not_match_the_result_type(
+def test_codex_adapter_reports_local_validation_failure_with_operation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    calls = 0
+
     def fake_run(command: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
         output_path = Path(command[command.index("--output-last-message") + 1])
         output_path.write_text('{"unexpected":true}', encoding="utf-8")
         return subprocess.CompletedProcess(command, 0, "", "")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "AI operation 'review_convergence' failed during local "
+            "result-type validation"
+        ),
+    ) as error:
         CodexAIExecutor().invoke(
             operation="review_convergence",
             payload={},
             result_type=CONVERGENCE_RESULT_TYPE,
         )
 
+    assert isinstance(error.value.__cause__, ValidationError)
+    assert calls == 1
 
-def test_codex_adapter_reports_one_failed_invocation_without_retrying(
+
+def test_codex_adapter_reports_launch_failure_with_operation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = 0
+
+    def fake_run(*_: object, **__: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        raise FileNotFoundError("codex executable missing")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    with pytest.raises(
+        RuntimeError,
+        match="AI operation 'review_convergence' failed during process launch",
+    ) as error:
+        CodexAIExecutor().invoke(
+            operation="review_convergence",
+            payload={},
+            result_type=CONVERGENCE_RESULT_TYPE,
+        )
+
+    assert isinstance(error.value.__cause__, FileNotFoundError)
+    assert calls == 1
+
+
+def test_codex_adapter_reports_malformed_json_with_operation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = 0
+
+    def fake_run(command: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        output_path = Path(command[command.index("--output-last-message") + 1])
+        output_path.write_text("{malformed", encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "AI operation 'review_convergence' failed during structured-output "
+            "decoding"
+        ),
+    ) as error:
+        CodexAIExecutor().invoke(
+            operation="review_convergence",
+            payload={},
+            result_type=CONVERGENCE_RESULT_TYPE,
+        )
+
+    assert isinstance(error.value.__cause__, json.JSONDecodeError)
+    assert calls == 1
+
+
+def test_codex_adapter_reports_provider_failure_with_operation_without_retrying(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls = 0
@@ -90,7 +160,13 @@ def test_codex_adapter_reports_one_failed_invocation_without_retrying(
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    with pytest.raises(RuntimeError, match="provider unavailable"):
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "AI operation 'review_convergence' failed during provider execution: "
+            "provider unavailable"
+        ),
+    ):
         CodexAIExecutor().invoke(
             operation="review_convergence",
             payload={},

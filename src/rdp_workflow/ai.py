@@ -10,7 +10,7 @@ from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any, Protocol, TypeVar
 
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 
 from rdp_workflow.ai_contracts import (
     ArchitectureOutput,
@@ -133,13 +133,31 @@ class CodexAIExecutor:
                     check=False,
                 )
             except OSError as exc:
-                raise RuntimeError(f"Codex execution could not start: {exc}") from exc
+                raise RuntimeError(
+                    f"AI operation {operation!r} failed during process launch: {exc}"
+                ) from exc
 
             if completed.returncode != 0:
                 detail = completed.stderr.strip() or "no error detail"
-                raise RuntimeError(f"Codex execution failed: {detail}")
+                raise RuntimeError(
+                    f"AI operation {operation!r} failed during provider execution: "
+                    f"{detail}"
+                )
 
-            return adapter.validate_json(output_path.read_text(encoding="utf-8"))
+            try:
+                output = json.loads(output_path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise RuntimeError(
+                    f"AI operation {operation!r} failed during structured-output "
+                    f"decoding: {exc}"
+                ) from exc
+            try:
+                return adapter.validate_python(output)
+            except ValidationError as exc:
+                raise RuntimeError(
+                    f"AI operation {operation!r} failed during local result-type "
+                    f"validation: {exc}"
+                ) from exc
 
 
 def load_prompt(operation: str) -> str:

@@ -194,7 +194,7 @@ def test_cli_status_shows_operator_state_without_internal_artifacts(
     assert ai.calls == []
 
 
-def test_cli_status_done_reports_canonical_availability_without_exposing_path(
+def test_cli_status_done_reports_no_for_invalid_final_artifact(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -212,9 +212,34 @@ def test_cli_status_done_reports_canonical_availability_without_exposing_path(
     output = capsys.readouterr()
     assert result == 0
     assert "state: DONE" in output.out
-    assert "canonical_available: yes" in output.out
+    assert "canonical_available: no" in output.out
     assert "canonical-rdp.md" not in output.out
     assert "run.json" not in output.out
+
+
+def test_cli_status_done_reports_yes_when_terminal_guard_succeeds(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    ai = ScriptedAI()
+    install_ai(monkeypatch, tmp_path, ai)
+    storage = FileStorage()
+    run = storage.create_run(source_at(tmp_path), run_id="valid-done-status")
+    run.state = WorkflowState.DONE
+    storage.save_run(run)
+    monkeypatch.setattr(
+        cli,
+        "final_canonical_path",
+        lambda current, run_dir: run_dir / "canonical-rdp.md",
+    )
+
+    result = cli.main(["status", run.run_id])
+
+    output = capsys.readouterr()
+    assert result == 0
+    assert "canonical_available: yes" in output.out
+    assert "canonical-rdp.md" not in output.out
 
 
 def test_cli_waiting_human_display_is_complete_and_labels_recommendation_advisory(
@@ -389,9 +414,10 @@ def test_cli_handoff_done_prints_only_canonical_path(
     install_ai(monkeypatch, tmp_path, ai)
     storage = FileStorage()
     run = storage.create_run(source_at(tmp_path), run_id="done-run")
-    path = storage.write_canonical(run.run_id, "# Canonical RDP\n")
+    path = storage.run_directory(run.run_id) / "canonical-rdp.md"
     run.state = WorkflowState.DONE
     storage.save_run(run)
+    monkeypatch.setattr(cli, "final_canonical_path", lambda current, run_dir: path)
 
     result = cli.main(["handoff", run.run_id])
 

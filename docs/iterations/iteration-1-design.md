@@ -135,7 +135,7 @@ An editorial failure leaves the FSM in `CANONICALIZATION`; the next phase execut
 
 ### BLOCKED path
 
-`BLOCKED` is limited to unusable/empty/unsupported Source PRD, unrecoverable persistence corruption, or impossible FSM/software invariant state. Normal product uncertainty uses `WAITING_HUMAN`; derived inconsistency uses `MODELING`; editorial defects use `CANONICALIZATION`. A transient provider/schema-output failure is reported without changing the FSM, allowing an explicit retry.
+Before run creation, missing, empty, unsupported, or invalid Source PRD input is a command/input error. After a parseable run has been created, structural corruption of that trusted active aggregate, including immutable Source PRD integrity failure or an impossible controlling FSM/software invariant, uses `BLOCKED` with a concrete diagnostic. Missing, unreadable, truncated, or invalid `run.json` remains an out-of-band storage error because there is no trusted aggregate to transition. Normal product uncertainty uses `WAITING_HUMAN`; derived inconsistency uses `MODELING`; editorial defects use `CANONICALIZATION`. A transient provider/schema-output failure is reported without changing the FSM, allowing an explicit retry.
 
 ## 7. Human Decisions and Active Authority
 

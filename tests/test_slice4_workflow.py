@@ -146,7 +146,9 @@ def rebuilt_model_outputs() -> tuple[object, object, object]:
     )
 
 
-def test_composer_cannot_run_without_convergence_pass(tmp_path: Path) -> None:
+def test_canonicalization_without_convergence_pass_becomes_blocked(
+    tmp_path: Path,
+) -> None:
     failure = ConvergenceResult(
         status="FAIL",
         findings=("The model needs correction.",),
@@ -156,11 +158,12 @@ def test_composer_cannot_run_without_convergence_pass(tmp_path: Path) -> None:
         tmp_path, ScriptedAI(), convergence=failure
     )
 
-    with pytest.raises(ValueError, match="requires Convergence PASS"):
-        service.advance(run_id)
+    blocked = service.advance(run_id)
 
     assert service.ai.calls == []
-    assert service.status(run_id).state is WorkflowState.CANONICALIZATION
+    assert blocked.state is WorkflowState.BLOCKED
+    assert blocked.diagnostics == ("CANONICALIZATION requires Convergence PASS.",)
+    assert service.status(run_id).state is WorkflowState.BLOCKED
 
 
 def test_validation_failure_stays_in_canonicalization_and_is_reprocessed(

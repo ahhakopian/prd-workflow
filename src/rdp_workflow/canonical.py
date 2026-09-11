@@ -582,13 +582,31 @@ def audit_canonical(
 
 
 def final_canonical_path(run: WorkflowRun, run_dir: Path) -> Path:
-    """Expose the sole downstream artifact, and only for explicit DONE state."""
+    """Expose the sole downstream artifact only after all terminal gates hold."""
 
     if run.state is not WorkflowState.DONE:
         raise ValueError("final Canonical RDP is available only for a DONE run")
+    if run.convergence_result is None or run.convergence_result.status != "PASS":
+        raise ValueError("DONE run requires Convergence PASS")
+    if run.canonical_candidate is None:
+        raise ValueError("DONE run is missing its Canonical RDP candidate")
+    if run.audit_result is None or run.audit_result.status != "PASS":
+        raise ValueError("DONE run requires Canonical Audit PASS")
+    findings = validate_contract(run.canonical_candidate)
+    if findings:
+        raise ValueError(
+            "DONE run has a contract-invalid Canonical RDP candidate: "
+            + "; ".join(findings)
+        )
     path = Path(run_dir) / "canonical-rdp.md"
     if not path.is_file():
         raise FileNotFoundError(f"DONE run is missing canonical-rdp.md: {path}")
+    expected = render_markdown(run.canonical_candidate).encode("utf-8")
+    if path.read_bytes() != expected:
+        raise ValueError(
+            "DONE run canonical-rdp.md does not match the deterministic rendering "
+            "of its persisted Canonical RDP candidate"
+        )
     return path
 
 

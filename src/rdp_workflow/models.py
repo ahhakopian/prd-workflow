@@ -524,6 +524,7 @@ class WorkflowRun(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
     run_id: str
+    source_prd_sha256: str = ""
     state: WorkflowState = WorkflowState.INTAKE
     pending_decision_origin: WorkflowState | None = None
     decisions: tuple[Decision, ...] = ()
