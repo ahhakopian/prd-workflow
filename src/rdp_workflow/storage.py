@@ -47,6 +47,11 @@ class FileStorage:
             )
         return run
 
+    def load_source(self, run_id: str) -> str:
+        """Load the unchanged UTF-8 Source PRD for a persisted run."""
+
+        return (self._run_dir(run_id) / "source-prd.md").read_bytes().decode("utf-8")
+
     def save_run(self, run: WorkflowRun) -> None:
         run_dir = self._run_dir(run.run_id)
         if not run_dir.is_dir():

@@ -55,6 +55,14 @@ def test_run_starts_in_intake_and_source_is_copied_unchanged(tmp_path: Path) -> 
     assert (storage.run_directory(run.run_id) / "run.json").is_file()
 
 
+def test_load_source_preserves_exact_source_text(tmp_path: Path) -> None:
+    source_bytes = "# Café\r\n\r\nPreserve me.  \r\n".encode()
+    storage = storage_at(tmp_path)
+    run = storage.create_run(create_source(tmp_path, source_bytes))
+
+    assert storage.load_source(run.run_id).encode() == source_bytes
+
+
 def test_missing_and_empty_source_fail_deterministically(tmp_path: Path) -> None:
     storage = storage_at(tmp_path)
 
