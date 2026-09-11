@@ -191,14 +191,13 @@ def test_workflow_ai_failure_does_not_change_persisted_state(
     assert service.status(started.run_id).state is WorkflowState.INTAKE
 
 
-def test_workflow_leaves_modeling_execution_deferred(
+def test_workflow_intake_advance_does_not_eagerly_execute_modeling(
     tmp_path: Path,
 ) -> None:
     service = service_at(tmp_path, ScriptedAI(None))
     started = service.start(source_at(tmp_path))
-    service.advance(started.run_id)
+    advanced = service.advance(started.run_id)
 
-    with pytest.raises(NotImplementedError, match="deferred beyond Slice 2"):
-        service.advance(started.run_id)
-
+    assert advanced.state is WorkflowState.MODELING
     assert service.status(started.run_id).state is WorkflowState.MODELING
+    assert [call["operation"] for call in service.ai.calls] == ["intake"]

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from rdp_workflow.ai import AIExecutor
-from rdp_workflow.analysis import analyze_intake
+from rdp_workflow.analysis import analyze_intake, derive_models, review_convergence
 from rdp_workflow.decisions import accept_answer, active_authority
 from rdp_workflow.models import HumanAnswer, WorkflowRun, WorkflowState
 from rdp_workflow.storage import FileStorage
@@ -89,11 +89,13 @@ class WorkflowService:
         match run.state:
             case WorkflowState.INTAKE:
                 return self._advance_intake(run)
+            case WorkflowState.MODELING:
+                return self._advance_modeling(run)
             case WorkflowState.WAITING_HUMAN:
                 raise ValueError("workflow is waiting for the current Human Decision")
             case _:
                 raise NotImplementedError(
-                    f"{run.state.value} execution is deferred beyond Slice 2"
+                    f"{run.state.value} execution is deferred beyond Slice 3"
                 )
 
     def answer(
@@ -103,16 +105,23 @@ class WorkflowService:
         answer: HumanAnswer,
     ) -> WorkflowRun:
         run = self.storage.load_run(run_id)
-        if (
-            run.state is WorkflowState.WAITING_HUMAN
-            and run.pending_decision_origin is not WorkflowState.INTAKE
-        ):
+        origin = run.pending_decision_origin
+        if run.state is WorkflowState.WAITING_HUMAN and origin is WorkflowState.CANONICALIZATION:
             raise NotImplementedError(
-                "only intake-origin Human Decisions are handled in Slice 2"
+                "CANONICALIZATION-origin Human Decisions are deferred beyond Slice 3"
             )
 
         accept_answer(run, decision_id, answer)
-        transition(run, WorkflowState.INTAKE)
+        if origin is WorkflowState.INTAKE:
+            transition(run, WorkflowState.INTAKE)
+        elif origin is WorkflowState.MODELING:
+            run.modeling_result = None
+            run.convergence_result = None
+            run.canonical_candidate = None
+            run.audit_result = None
+            transition(run, WorkflowState.MODELING)
+        else:  # accept_answer rejects a missing or inconsistent pending origin first
+            raise ValueError("pending Decision has no supported origin")
         self.storage.save_run(run)
         return run
 
@@ -138,6 +147,47 @@ class WorkflowService:
                 raise ValueError("Decision IDs must be unique within a run")
             run.decisions = (*run.decisions, decision)
             run.pending_decision_origin = WorkflowState.INTAKE
+            transition(run, WorkflowState.WAITING_HUMAN)
+
+        self.storage.save_run(run)
+        return run
+
+    def _advance_modeling(self, run: WorkflowRun) -> WorkflowRun:
+        if any(
+            decision.classification == "MATERIAL" and decision.status == "PENDING"
+            for decision in run.decisions
+        ):
+            raise ValueError("MODELING cannot advance with an existing pending Decision")
+
+        authority = active_authority(run, self.storage.load_source(run.run_id))
+        prior_findings = (
+            run.convergence_result.findings
+            if run.convergence_result is not None
+            and run.convergence_result.status == "FAIL"
+            and run.convergence_result.remediation == "REMODEL"
+            else ()
+        )
+        models = derive_models(authority, prior_findings, self.ai)
+        convergence = review_convergence(authority, models, self.ai)
+
+        run.modeling_result = models
+        run.convergence_result = convergence
+
+        if convergence.status == "PASS":
+            transition(run, WorkflowState.CANONICALIZATION)
+        elif convergence.remediation == "REMODEL":
+            transition(run, WorkflowState.MODELING)
+        else:
+            decision = convergence.decision
+            if decision is None:  # guarded by ConvergenceResult validation
+                raise ValueError("HUMAN_DECISION remediation has no Decision")
+            if any(
+                existing.decision_id == decision.decision_id
+                for existing in run.decisions
+            ):
+                raise ValueError("Decision IDs must be unique within a run")
+            run.decisions = (*run.decisions, decision)
+            run.pending_decision_origin = WorkflowState.MODELING
             transition(run, WorkflowState.WAITING_HUMAN)
 
         self.storage.save_run(run)

@@ -225,6 +225,22 @@ class ModelingResult(BaseModel):
     architecture: ArchitectureView
     deferred_decisions: tuple[Decision, ...] = ()
 
+    @model_validator(mode="after")
+    def _validate_deferred_decisions(self) -> Self:
+        if any(
+            decision.classification != "DEFERRED"
+            for decision in self.deferred_decisions
+        ):
+            raise ValueError(
+                "ModelingResult deferred_decisions may contain only DEFERRED Decisions"
+            )
+        decision_ids = [
+            decision.decision_id for decision in self.deferred_decisions
+        ]
+        if len(decision_ids) != len(set(decision_ids)):
+            raise ValueError("deferred Decision IDs must be unique within a model set")
+        return self
+
 
 class ConvergenceResult(BaseModel):
     """Current convergence review output; not a transition by itself."""
@@ -234,12 +250,42 @@ class ConvergenceResult(BaseModel):
     status: Literal["PASS", "FAIL"]
     findings: tuple[str, ...] = ()
     remediation: Literal["HUMAN_DECISION", "REMODEL"] | None = None
+    decision: Decision | None = None
+
+    @field_validator("findings")
+    @classmethod
+    def _validate_findings(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        for value in values:
+            _non_blank(value)
+        return values
 
     @model_validator(mode="after")
     def _validate_result(self) -> Self:
-        if self.status == "PASS" and self.remediation is not None:
-            raise ValueError("a PASS ConvergenceResult cannot require remediation")
-        if self.status == "FAIL" and self.remediation is None:
+        if self.status == "PASS":
+            if self.remediation is not None:
+                raise ValueError("a PASS ConvergenceResult cannot require remediation")
+            if self.decision is not None:
+                raise ValueError("a PASS ConvergenceResult cannot contain a Decision")
+        elif not self.findings:
+            raise ValueError("a FAIL ConvergenceResult requires findings")
+        elif self.remediation == "REMODEL":
+            if self.decision is not None:
+                raise ValueError(
+                    "a REMODEL ConvergenceResult cannot contain a Decision"
+                )
+        elif self.remediation == "HUMAN_DECISION":
+            decision = self.decision
+            if (
+                decision is None
+                or decision.classification != "MATERIAL"
+                or decision.status != "PENDING"
+                or decision.origin_state is not WorkflowState.MODELING
+            ):
+                raise ValueError(
+                    "HUMAN_DECISION requires exactly one pending "
+                    "MODELING-origin MATERIAL Decision"
+                )
+        else:
             raise ValueError("a FAIL ConvergenceResult requires remediation")
         return self
 
