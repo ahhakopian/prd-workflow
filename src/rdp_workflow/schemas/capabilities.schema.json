@@ -1,0 +1,91 @@
+{
+  "$defs": {
+    "CapabilityValue": {
+      "additionalProperties": false,
+      "description": "One shallow capability value within a ModelingResult.",
+      "properties": {
+        "actors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Actors",
+          "type": "array"
+        },
+        "business_rules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Business Rules",
+          "type": "array"
+        },
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dependencies",
+          "type": "array"
+        },
+        "failure_conditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Failure Conditions",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "purpose": {
+          "title": "Purpose",
+          "type": "string"
+        },
+        "release_status": {
+          "enum": [
+            "IN",
+            "PARTIAL",
+            "OUT",
+            "FUTURE"
+          ],
+          "title": "Release Status",
+          "type": "string"
+        },
+        "required_behavior": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Behavior",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "purpose",
+        "release_status",
+        "actors",
+        "required_behavior",
+        "business_rules",
+        "dependencies",
+        "failure_conditions"
+      ],
+      "title": "CapabilityValue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Named output of capability derivation.",
+  "properties": {
+    "capabilities": {
+      "items": {
+        "$ref": "#/$defs/CapabilityValue"
+      },
+      "title": "Capabilities",
+      "type": "array"
+    }
+  },
+  "required": [
+    "capabilities"
+  ],
+  "title": "CapabilitiesOutput",
+  "type": "object"
+}

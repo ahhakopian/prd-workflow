@@ -6,6 +6,15 @@ from typing import Any
 
 import pytest
 
+from rdp_workflow.ai_contracts import (
+    ArchitectureOutput,
+    CapabilitiesOutput,
+    ConvergenceHumanDecisionOutput,
+    ConvergencePassOutput,
+    ConvergenceRemodelOutput,
+    DomainOutput,
+    MaterialDecisionDraft,
+)
 from rdp_workflow.decisions import active_authority
 from rdp_workflow.models import (
     ArchitectureView,
@@ -92,9 +101,11 @@ def architecture(version: str = "first") -> ArchitectureView:
 
 def model_outputs(version: str = "first") -> tuple[object, object, object]:
     return (
-        (product_context(version), domain_view(version)),
-        capabilities(version),
-        (architecture(version), ()),
+        DomainOutput(
+            product_context=product_context(version), domain=domain_view(version)
+        ),
+        CapabilitiesOutput(capabilities=capabilities(version)),
+        ArchitectureOutput(architecture=architecture(version), deferred_decisions=()),
     )
 
 
@@ -119,6 +130,18 @@ def modeling_decision() -> Decision:
         ),
         recommended_option_id="A",
         recommendation_rationale="Immutability provides a simpler audit trail.",
+    )
+
+
+def modeling_decision_draft() -> MaterialDecisionDraft:
+    decision = modeling_decision()
+    return MaterialDecisionDraft(
+        decision_id=decision.decision_id,
+        question=decision.question,
+        context=decision.context,
+        options=decision.options,
+        recommended_option_id=decision.recommended_option_id,
+        recommendation_rationale=decision.recommendation_rationale,
     )
 
 
@@ -154,7 +177,7 @@ def test_modeling_pass_persists_fresh_results_and_reaches_canonicalization(
     ai = ScriptedAI(
         None,
         *model_outputs(),
-        ConvergenceResult(status="PASS"),
+        ConvergencePassOutput(outcome="PASS"),
     )
     service = service_at(tmp_path, ai)
     run_id = start_in_modeling(service, tmp_path)
@@ -183,11 +206,11 @@ def test_modeling_remodel_stays_in_modeling_and_next_run_fully_rebuilds(
     ai = ScriptedAI(
         None,
         *model_outputs("first"),
-        ConvergenceResult(
-            status="FAIL", findings=(finding,), remediation="REMODEL"
+        ConvergenceRemodelOutput(
+            outcome="REMODEL", findings=(finding,)
         ),
         *model_outputs("rebuilt"),
-        ConvergenceResult(status="PASS"),
+        ConvergencePassOutput(outcome="PASS"),
     )
     service = service_at(tmp_path, ai)
     run_id = start_in_modeling(service, tmp_path)
@@ -220,13 +243,12 @@ def test_modeling_remodel_stays_in_modeling_and_next_run_fully_rebuilds(
 def test_modeling_human_decision_waits_with_exactly_one_pending_decision(
     tmp_path: Path,
 ) -> None:
-    convergence = ConvergenceResult(
-        status="FAIL",
+    provider_convergence = ConvergenceHumanDecisionOutput(
+        outcome="HUMAN_DECISION",
         findings=("Authority does not define post-submission editing.",),
-        remediation="HUMAN_DECISION",
-        decision=modeling_decision(),
+        decision=modeling_decision_draft(),
     )
-    ai = ScriptedAI(None, *model_outputs(), convergence)
+    ai = ScriptedAI(None, *model_outputs(), provider_convergence)
     service = service_at(tmp_path, ai)
     run_id = start_in_modeling(service, tmp_path)
 
@@ -236,17 +258,21 @@ def test_modeling_human_decision_waits_with_exactly_one_pending_decision(
     assert advanced.state is WorkflowState.WAITING_HUMAN
     assert advanced.pending_decision_origin is WorkflowState.MODELING
     assert pending == [modeling_decision()]
-    assert advanced.convergence_result == convergence
+    assert advanced.convergence_result == ConvergenceResult(
+        status="FAIL",
+        findings=provider_convergence.findings,
+        remediation="HUMAN_DECISION",
+        decision=modeling_decision(),
+    )
 
 
 def test_ai_generated_human_decision_cannot_fabricate_active_authority(
     tmp_path: Path,
 ) -> None:
-    convergence = ConvergenceResult(
-        status="FAIL",
+    convergence = ConvergenceHumanDecisionOutput(
+        outcome="HUMAN_DECISION",
         findings=("A material edit-policy answer is absent.",),
-        remediation="HUMAN_DECISION",
-        decision=modeling_decision(),
+        decision=modeling_decision_draft(),
     )
     ai = ScriptedAI(None, *model_outputs(), convergence)
     service = service_at(tmp_path, ai)
@@ -263,11 +289,10 @@ def test_ai_generated_human_decision_cannot_fabricate_active_authority(
 def test_modeling_origin_answer_returns_to_modeling_and_clears_all_derived_values(
     tmp_path: Path,
 ) -> None:
-    convergence = ConvergenceResult(
-        status="FAIL",
+    convergence = ConvergenceHumanDecisionOutput(
+        outcome="HUMAN_DECISION",
         findings=("A material edit-policy answer is absent.",),
-        remediation="HUMAN_DECISION",
-        decision=modeling_decision(),
+        decision=modeling_decision_draft(),
     )
     ai = ScriptedAI(None, *model_outputs(), convergence)
     service = service_at(tmp_path, ai)
@@ -297,18 +322,17 @@ def test_modeling_origin_answer_returns_to_modeling_and_clears_all_derived_value
 def test_next_modeling_execution_after_answer_rebuilds_all_views_from_new_authority(
     tmp_path: Path,
 ) -> None:
-    human_failure = ConvergenceResult(
-        status="FAIL",
+    human_failure = ConvergenceHumanDecisionOutput(
+        outcome="HUMAN_DECISION",
         findings=("A material edit-policy answer is absent.",),
-        remediation="HUMAN_DECISION",
-        decision=modeling_decision(),
+        decision=modeling_decision_draft(),
     )
     ai = ScriptedAI(
         None,
         *model_outputs("before-answer"),
         human_failure,
         *model_outputs("after-answer"),
-        ConvergenceResult(status="PASS"),
+        ConvergencePassOutput(outcome="PASS"),
     )
     service = service_at(tmp_path, ai)
     run_id = start_in_modeling(service, tmp_path)

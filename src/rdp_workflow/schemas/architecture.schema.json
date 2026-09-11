@@ -1,0 +1,136 @@
+{
+  "$defs": {
+    "ArchitectureView": {
+      "additionalProperties": false,
+      "description": "Shallow architecture values within a ModelingResult.",
+      "properties": {
+        "constraints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Constraints",
+          "type": "array"
+        },
+        "cross_cutting_requirements": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cross Cutting Requirements",
+          "type": "array"
+        },
+        "interactions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Interactions",
+          "type": "array"
+        },
+        "invariants": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Invariants",
+          "type": "array"
+        },
+        "ownership": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ownership",
+          "type": "array"
+        },
+        "responsibility_areas": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Responsibility Areas",
+          "type": "array"
+        },
+        "system_boundaries": {
+          "items": {
+            "type": "string"
+          },
+          "title": "System Boundaries",
+          "type": "array"
+        }
+      },
+      "required": [
+        "responsibility_areas",
+        "system_boundaries",
+        "ownership",
+        "interactions",
+        "constraints",
+        "invariants",
+        "cross_cutting_requirements"
+      ],
+      "title": "ArchitectureView",
+      "type": "object"
+    },
+    "DeferredDecisionDraft": {
+      "additionalProperties": false,
+      "description": "Only the fields an AI supplies for one demonstrably safe deferral.",
+      "properties": {
+        "context": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Context"
+        },
+        "decision_id": {
+          "title": "Decision Id",
+          "type": "string"
+        },
+        "downstream_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Downstream Constraints",
+          "type": "array"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "safe_to_defer_rationale": {
+          "title": "Safe To Defer Rationale",
+          "type": "string"
+        }
+      },
+      "required": [
+        "decision_id",
+        "question",
+        "context",
+        "safe_to_defer_rationale",
+        "downstream_constraints"
+      ],
+      "title": "DeferredDecisionDraft",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Named output of architecture derivation and safe deferral drafting.",
+  "properties": {
+    "architecture": {
+      "$ref": "#/$defs/ArchitectureView"
+    },
+    "deferred_decisions": {
+      "items": {
+        "$ref": "#/$defs/DeferredDecisionDraft"
+      },
+      "title": "Deferred Decisions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "architecture",
+    "deferred_decisions"
+  ],
+  "title": "ArchitectureOutput",
+  "type": "object"
+}

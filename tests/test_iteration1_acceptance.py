@@ -6,6 +6,15 @@ from typing import Any
 
 import pytest
 
+from rdp_workflow.ai_contracts import (
+    ArchitectureOutput,
+    AuditPassOutput,
+    CapabilitiesOutput,
+    ConvergenceHumanDecisionOutput,
+    ConvergencePassOutput,
+    DomainOutput,
+    MaterialDecisionDraft,
+)
 from rdp_workflow.canonical import final_canonical_path, render_markdown
 from rdp_workflow.models import (
     ArchitectureView,
@@ -131,6 +140,18 @@ def edit_decision() -> Decision:
     )
 
 
+def edit_decision_draft() -> MaterialDecisionDraft:
+    decision = edit_decision()
+    return MaterialDecisionDraft(
+        decision_id=decision.decision_id,
+        question=decision.question,
+        context=decision.context,
+        options=decision.options,
+        recommended_option_id=decision.recommended_option_id,
+        recommendation_rationale=decision.recommendation_rationale,
+    )
+
+
 def model_outputs(version: str) -> tuple[object, object, object]:
     edit_rule = (
         ("Pending reports are treated as immutable in this incomplete pre-answer model.",)
@@ -186,7 +207,11 @@ def model_outputs(version: str) -> tuple[object, object, object]:
             "Make report status changes immediately visible.",
         ),
     )
-    return (product, domain), capabilities, (architecture, ())
+    return (
+        DomainOutput(product_context=product, domain=domain),
+        CapabilitiesOutput(capabilities=capabilities),
+        ArchitectureOutput(architecture=architecture, deferred_decisions=()),
+    )
 
 
 def final_document() -> CanonicalRDP:
@@ -368,9 +393,14 @@ def test_iteration_1_walking_skeleton_filesystem_acceptance(tmp_path: Path) -> N
     pre_answer_outputs = model_outputs("pre-answer")
     post_answer_outputs = model_outputs("post-answer")
     decision = edit_decision()
+    first_convergence_output = ConvergenceHumanDecisionOutput(
+        outcome="HUMAN_DECISION",
+        findings=(MISSING_EDIT_FINDING,),
+        decision=edit_decision_draft(),
+    )
     first_convergence = ConvergenceResult(
         status="FAIL",
-        findings=(MISSING_EDIT_FINDING,),
+        findings=first_convergence_output.findings,
         remediation="HUMAN_DECISION",
         decision=decision,
     )
@@ -378,11 +408,11 @@ def test_iteration_1_walking_skeleton_filesystem_acceptance(tmp_path: Path) -> N
     ai = ScriptedAI(
         None,
         *pre_answer_outputs,
-        first_convergence,
+        first_convergence_output,
         *post_answer_outputs,
-        ConvergenceResult(status="PASS"),
+        ConvergencePassOutput(outcome="PASS"),
         candidate,
-        AuditResult(status="PASS"),
+        AuditPassOutput(outcome="PASS"),
     )
     storage_root = tmp_path / ".rdp"
     service = WorkflowService(FileStorage(storage_root), ai)
@@ -506,11 +536,11 @@ def test_iteration_1_walking_skeleton_filesystem_acceptance(tmp_path: Path) -> N
 
 
 def post_answer_outputs_to_model_dump(outputs: tuple[object, object, object]) -> dict[str, object]:
-    (product, domain), capabilities, (architecture, deferred) = outputs
+    domain_output, capabilities_output, architecture_output = outputs
     return ModelingResult(
-        product_context=product,
-        domain=domain,
-        capabilities=capabilities,
-        architecture=architecture,
-        deferred_decisions=deferred,
+        product_context=domain_output.product_context,
+        domain=domain_output.domain,
+        capabilities=capabilities_output.capabilities,
+        architecture=architecture_output.architecture,
+        deferred_decisions=(),
     ).model_dump(mode="json")

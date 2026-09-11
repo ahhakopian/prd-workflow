@@ -2,11 +2,24 @@
 
 from __future__ import annotations
 
+import re
+from importlib import resources
 from pathlib import Path
 
 from pydantic import TypeAdapter
 
-from rdp_workflow.ai import AIExecutor
+from rdp_workflow.ai import (
+    CANONICAL_AUDIT_RESULT_TYPE,
+    CANONICAL_RESULT_TYPE,
+    AIExecutor,
+)
+from rdp_workflow.ai_contracts import (
+    AuditEditorialOutput,
+    AuditHumanDecisionOutput,
+    AuditPassOutput,
+    AuditRemodelOutput,
+    material_decision_from_draft,
+)
 from rdp_workflow.models import (
     AuditResult,
     CanonicalActor,
@@ -40,6 +53,50 @@ _SECTION_FIELDS_AND_TITLES = (
     ),
 )
 
+_TEMPLATE_PLACEHOLDERS = (
+    "{{PRODUCT_SUMMARY}}",
+    "{{PRODUCT_PROBLEM}}",
+    "{{PRODUCT_TARGET_ACTORS}}",
+    "{{PRODUCT_INTENDED_OUTCOME}}",
+    "{{PRODUCT_GOALS}}",
+    "{{PRODUCT_NON_GOALS}}",
+    "{{SCOPE_SUMMARY}}",
+    "{{TARGET_RELEASE}}",
+    "{{SCOPE_CAPABILITY_BLOCKS}}",
+    "{{ACTORS_SUMMARY}}",
+    "{{ACTOR_BLOCKS}}",
+    "{{DOMAIN_SUMMARY}}",
+    "{{DOMAIN_CONCEPTS}}",
+    "{{DOMAIN_RELATIONSHIPS}}",
+    "{{DOMAIN_INVARIANTS}}",
+    "{{DOMAIN_TERMINOLOGY}}",
+    "{{CAPABILITIES_SUMMARY}}",
+    "{{CAPABILITY_BLOCKS}}",
+    "{{BOUNDARIES_SUMMARY}}",
+    "{{INSIDE_SYSTEM}}",
+    "{{OUTSIDE_SYSTEM}}",
+    "{{EXTERNAL_DEPENDENCIES}}",
+    "{{DATA_OWNERSHIP}}",
+    "{{DECISION_OWNERSHIP}}",
+    "{{RESPONSIBILITY_OWNERSHIP}}",
+    "{{SYSTEMS_OF_RECORD}}",
+    "{{ARCHITECTURE_SUMMARY}}",
+    "{{ARCHITECTURE_RESPONSIBILITY_AREAS}}",
+    "{{ARCHITECTURE_NON_RESPONSIBILITIES}}",
+    "{{ARCHITECTURE_INTERACTIONS}}",
+    "{{ARCHITECTURE_CONSTRAINTS}}",
+    "{{ARCHITECTURE_INVARIANTS}}",
+    "{{ARCHITECTURE_DEPENDENCY_DIRECTIONS}}",
+    "{{CROSS_CUTTING_SUMMARY}}",
+    "{{CROSS_CUTTING_REQUIREMENTS}}",
+    "{{RESPONSIBILITY_BOUNDARIES_SUMMARY}}",
+    "{{RESPONSIBILITY_BOUNDARY_BLOCKS}}",
+    "{{DEFERRED_SUMMARY}}",
+    "{{DEFERRED_DECISION_BLOCKS}}",
+    "{{FIXED_UPSTREAM_CONSTRAINTS}}",
+)
+_PLACEHOLDER_PATTERN = re.compile(r"\{\{[^{}\n]+\}\}")
+
 
 def compose_canonical(
     authority: dict[str, object],
@@ -55,74 +112,51 @@ def compose_canonical(
             "active_authority": authority,
             "converged_modeling_result": models.model_dump(mode="json"),
             "previous_editorial_or_validation_findings": editorial_findings,
-            "canonical_composer_contract": {
-                "purpose": (
-                    "Compose one structured, self-contained Canonical RDP from the "
-                    "supplied Active Authority and Convergence-PASS ModelingResult. "
-                    "Composition is derived and non-authoritative."
-                ),
-                "required_sections_in_order": tuple(
-                    title for _, title in _SECTION_FIELDS_AND_TITLES
-                ),
-                "authority_rules": (
-                    "Only the Source PRD and accepted, non-superseded Human Decisions "
-                    "inside Active Authority are Material Authority.",
-                    "The ModelingResult, previous findings, this composition, and all "
-                    "AI recommendations are derived and are not Authority.",
-                    "Preserve every accepted non-superseded Human Decision exactly in "
-                    "meaning, including selected-option text plus any Human clarification.",
-                ),
-                "allowed_composition": (
-                    "consolidate already-established semantics",
-                    "organize content into the ten required sections",
-                    "normalize terminology without changing material meaning",
-                    "remove workflow history, recommendations, findings, and rejected or "
-                    "superseded alternatives",
-                    "express already-established semantics clearly",
-                ),
-                "prohibited_composition": (
-                    "create Material Authority or promote an AI recommendation to Authority",
-                    "invent product behavior or target-release scope",
-                    "invent actors, roles, permissions, domain semantics, or business rules",
-                    "invent data, decision, responsibility ownership, system boundaries, "
-                    "or required responsibility boundaries",
-                    "invent architecture constraints, security requirements, privacy "
-                    "requirements, or material non-functional requirements",
-                    "answer a Material Unknown, choose between unresolved alternatives, "
-                    "or reinterpret a Human Decision",
-                    "add implementation technologies or downstream Feature decisions "
-                    "unless explicitly required by Active Authority",
-                ),
-                "structural_rules": (
-                    "Every material capability has a stable capability_id and exactly one "
-                    "IN, PARTIAL, OUT, or FUTURE scope entry for the target release.",
-                    "PARTIAL scope states both included and excluded behavior.",
-                    "Every actor referenced by a target user or capability is defined by "
-                    "stable actor_id with sufficient role and permission semantics.",
-                    "Responsibility boundaries use stable IDs, ownership statements, "
-                    "dependency constraints, and supported capability IDs where applicable.",
-                    "Every Deferred Decision states what is undecided, why every acceptable "
-                    "choice is safe downstream, and constraints those choices must preserve.",
-                    "Do not represent any unresolved Material question as finalized content "
-                    "or disguise it as a Deferred Decision.",
-                    "Each section remains present and explicitly states when no additional "
-                    "constraints apply.",
-                ),
-                "corrective_findings_rule": (
-                    "Previous findings are non-authoritative editorial input. Correct only "
-                    "representation using established meaning; never treat a finding as a "
-                    "new requirement or authoritative answer."
-                ),
-            },
         },
-        result_type=CanonicalRDP,
+        result_type=CANONICAL_RESULT_TYPE,
     )
-    return TypeAdapter(CanonicalRDP).validate_python(result)
+    return TypeAdapter(CANONICAL_RESULT_TYPE).validate_python(result)
 
 
 def render_markdown(document: CanonicalRDP) -> str:
     """Render the exact downstream artifact with no reasoning or AI operation."""
 
+    values = _render_template_values(document)
+    template = load_canonical_template()
+    found = _PLACEHOLDER_PATTERN.findall(template)
+    expected = set(_TEMPLATE_PLACEHOLDERS)
+    missing = [
+        placeholder for placeholder in _TEMPLATE_PLACEHOLDERS if placeholder not in found
+    ]
+    duplicated = [
+        placeholder
+        for placeholder in _TEMPLATE_PLACEHOLDERS
+        if found.count(placeholder) > 1
+    ]
+    unknown = sorted(set(found) - expected)
+    if missing or duplicated or unknown:
+        raise ValueError(
+            "invalid Canonical template placeholders: "
+            f"missing={missing}, duplicated={duplicated}, unknown={unknown}"
+        )
+
+    rendered = template
+    for placeholder, value in values.items():
+        rendered = rendered.replace(placeholder, value)
+    if _PLACEHOLDER_PATTERN.search(rendered) or "{{" in rendered or "}}" in rendered:
+        raise ValueError("Canonical template contains an unreplaced placeholder")
+    return rendered
+
+
+def load_canonical_template() -> str:
+    """Load the fixed Canonical Markdown layout from the installed package."""
+
+    return resources.files("rdp_workflow").joinpath(
+        "templates", "canonical-rdp.md"
+    ).read_text(encoding="utf-8")
+
+
+def _render_template_values(document: CanonicalRDP) -> dict[str, str]:
     product = document.product_definition
     scope = document.scope_and_release_boundary
     actors = document.actors_and_roles
@@ -134,130 +168,208 @@ def render_markdown(document: CanonicalRDP) -> str:
     responsibility_boundaries = document.required_responsibility_boundaries
     deferred = document.deferred_decisions_and_handoff_constraints
 
-    lines = ["# Canonical RDP", "", "## 1. Product Definition", "", product.summary]
-    _labeled_text(lines, "Problem", product.problem)
-    _labeled_items(lines, "Target actor IDs", product.target_actor_ids)
-    _labeled_text(lines, "Intended outcome", product.intended_outcome)
-    _labeled_items(lines, "Goals", product.goals)
-    _labeled_items(lines, "Explicit non-goals", product.non_goals)
+    return {
+        "{{PRODUCT_SUMMARY}}": product.summary,
+        "{{PRODUCT_PROBLEM}}": product.problem,
+        "{{PRODUCT_TARGET_ACTORS}}": _markdown_list(product.target_actor_ids),
+        "{{PRODUCT_INTENDED_OUTCOME}}": product.intended_outcome,
+        "{{PRODUCT_GOALS}}": _markdown_list(product.goals),
+        "{{PRODUCT_NON_GOALS}}": _markdown_list(product.non_goals),
+        "{{SCOPE_SUMMARY}}": scope.summary,
+        "{{TARGET_RELEASE}}": scope.target_release,
+        "{{SCOPE_CAPABILITY_BLOCKS}}": _render_scope_capability_blocks(
+            scope.capabilities
+        ),
+        "{{ACTORS_SUMMARY}}": actors.summary,
+        "{{ACTOR_BLOCKS}}": _render_actor_blocks(actors.actors),
+        "{{DOMAIN_SUMMARY}}": domain.summary,
+        "{{DOMAIN_CONCEPTS}}": _markdown_list(domain.concepts),
+        "{{DOMAIN_RELATIONSHIPS}}": _markdown_list(domain.relationships),
+        "{{DOMAIN_INVARIANTS}}": _markdown_list(domain.invariants),
+        "{{DOMAIN_TERMINOLOGY}}": _markdown_list(domain.terminology),
+        "{{CAPABILITIES_SUMMARY}}": capabilities.summary,
+        "{{CAPABILITY_BLOCKS}}": _render_capability_blocks(
+            capabilities.capabilities
+        ),
+        "{{BOUNDARIES_SUMMARY}}": boundaries.summary,
+        "{{INSIDE_SYSTEM}}": _markdown_list(boundaries.inside_system),
+        "{{OUTSIDE_SYSTEM}}": _markdown_list(boundaries.outside_system),
+        "{{EXTERNAL_DEPENDENCIES}}": _markdown_list(
+            boundaries.external_dependencies
+        ),
+        "{{DATA_OWNERSHIP}}": _markdown_list(boundaries.data_ownership),
+        "{{DECISION_OWNERSHIP}}": _markdown_list(boundaries.decision_ownership),
+        "{{RESPONSIBILITY_OWNERSHIP}}": _markdown_list(
+            boundaries.responsibility_ownership
+        ),
+        "{{SYSTEMS_OF_RECORD}}": _markdown_list(boundaries.systems_of_record),
+        "{{ARCHITECTURE_SUMMARY}}": architecture.summary,
+        "{{ARCHITECTURE_RESPONSIBILITY_AREAS}}": _markdown_list(
+            architecture.responsibility_areas
+        ),
+        "{{ARCHITECTURE_NON_RESPONSIBILITIES}}": _markdown_list(
+            architecture.non_responsibilities
+        ),
+        "{{ARCHITECTURE_INTERACTIONS}}": _markdown_list(architecture.interactions),
+        "{{ARCHITECTURE_CONSTRAINTS}}": _markdown_list(architecture.constraints),
+        "{{ARCHITECTURE_INVARIANTS}}": _markdown_list(architecture.invariants),
+        "{{ARCHITECTURE_DEPENDENCY_DIRECTIONS}}": _markdown_list(
+            architecture.dependency_directions
+        ),
+        "{{CROSS_CUTTING_SUMMARY}}": cross_cutting.summary,
+        "{{CROSS_CUTTING_REQUIREMENTS}}": _markdown_list(
+            cross_cutting.requirements
+        ),
+        "{{RESPONSIBILITY_BOUNDARIES_SUMMARY}}": responsibility_boundaries.summary,
+        "{{RESPONSIBILITY_BOUNDARY_BLOCKS}}": _render_responsibility_boundary_blocks(
+            responsibility_boundaries.boundaries
+        ),
+        "{{DEFERRED_SUMMARY}}": deferred.summary,
+        "{{DEFERRED_DECISION_BLOCKS}}": _render_deferred_decision_blocks(
+            deferred.decisions
+        ),
+        "{{FIXED_UPSTREAM_CONSTRAINTS}}": _markdown_list(
+            deferred.fixed_upstream_constraints
+        ),
+    }
 
-    lines.extend(["", "## 2. Scope & Release Boundary", "", scope.summary])
-    _labeled_text(lines, "Target release", scope.target_release)
-    for item in scope.capabilities:
-        lines.extend(
-            [
-                "",
-                f"### Capability `{item.capability_id}` — {item.status}",
-            ]
+
+def _markdown_list(values: tuple[str, ...]) -> str:
+    if not values:
+        return "- None established."
+    return "\n".join(f"- {value}" for value in values)
+
+
+def _render_scope_capability_blocks(
+    capabilities: tuple[CanonicalScopeEntry, ...],
+) -> str:
+    blocks = []
+    for item in capabilities:
+        blocks.append(
+            "\n".join(
+                (
+                    f"### Capability `{item.capability_id}` — {item.status}",
+                    "",
+                    "**Included:**",
+                    _markdown_list(item.included),
+                    "",
+                    "**Excluded:**",
+                    _markdown_list(item.excluded),
+                )
+            )
         )
-        _labeled_items(lines, "Included", item.included)
-        _labeled_items(lines, "Excluded", item.excluded)
+    return "\n\n".join(blocks) if blocks else "- None established."
 
-    lines.extend(["", "## 3. Actors & Roles", "", actors.summary])
-    for actor in actors.actors:
-        lines.extend(["", f"### `{actor.actor_id}` — {actor.name} ({actor.kind})"])
-        _labeled_text(lines, "Purpose or responsibility", actor.purpose)
-        _labeled_items(lines, "May do", actor.may_do)
-        _labeled_items(lines, "Must do", actor.must_do)
-        _labeled_items(lines, "Must not do", actor.must_not_do)
-        _labeled_items(lines, "Permission boundaries", actor.permission_boundaries)
 
-    lines.extend(["", "## 4. Domain Model", "", domain.summary])
-    _labeled_items(lines, "Material concepts", domain.concepts)
-    _labeled_items(lines, "Material relationships", domain.relationships)
-    _labeled_items(lines, "Domain invariants", domain.invariants)
-    _labeled_items(lines, "Canonical terminology", domain.terminology)
-
-    lines.extend(["", "## 5. Functional Capabilities", "", capabilities.summary])
-    for capability in capabilities.capabilities:
-        lines.extend(
-            ["", f"### `{capability.capability_id}` — {capability.name}", "", capability.purpose]
+def _render_actor_blocks(actors: tuple[CanonicalActor, ...]) -> str:
+    blocks = []
+    for actor in actors:
+        blocks.append(
+            "\n".join(
+                (
+                    f"### `{actor.actor_id}` — {actor.name} ({actor.kind})",
+                    "",
+                    f"**Purpose or responsibility:** {actor.purpose}",
+                    "",
+                    "**May do:**",
+                    _markdown_list(actor.may_do),
+                    "",
+                    "**Must do:**",
+                    _markdown_list(actor.must_do),
+                    "",
+                    "**Must not do:**",
+                    _markdown_list(actor.must_not_do),
+                    "",
+                    "**Permission boundaries:**",
+                    _markdown_list(actor.permission_boundaries),
+                )
+            )
         )
-        _labeled_items(lines, "Applicable actor IDs", capability.actor_ids)
-        _labeled_items(lines, "Required behavior", capability.required_behavior)
-        _labeled_items(lines, "Material business rules", capability.business_rules)
-        _labeled_items(
-            lines,
-            "Capability dependency IDs",
-            capability.dependency_capability_ids,
-        )
-        _labeled_items(lines, "Failure or rejection conditions", capability.failure_conditions)
+    return "\n\n".join(blocks) if blocks else "- None established."
 
-    lines.extend(
-        ["", "## 6. System Boundaries & Ownership", "", boundaries.summary]
-    )
-    _labeled_items(lines, "Inside the system", boundaries.inside_system)
-    _labeled_items(lines, "Outside the system", boundaries.outside_system)
-    _labeled_items(lines, "External dependencies", boundaries.external_dependencies)
-    _labeled_items(lines, "Data ownership", boundaries.data_ownership)
-    _labeled_items(lines, "Decision ownership", boundaries.decision_ownership)
-    _labeled_items(
-        lines, "Responsibility ownership", boundaries.responsibility_ownership
-    )
-    _labeled_items(lines, "Authoritative systems of record", boundaries.systems_of_record)
 
-    lines.extend(["", "## 7. High-Level Architecture", "", architecture.summary])
-    _labeled_items(lines, "Responsibility areas", architecture.responsibility_areas)
-    _labeled_items(lines, "Explicit non-responsibilities", architecture.non_responsibilities)
-    _labeled_items(lines, "Major interactions", architecture.interactions)
-    _labeled_items(lines, "Architectural constraints", architecture.constraints)
-    _labeled_items(lines, "Architectural invariants", architecture.invariants)
-    _labeled_items(lines, "Material dependency directions", architecture.dependency_directions)
+def _render_capability_blocks(
+    capabilities: tuple[CanonicalCapability, ...],
+) -> str:
+    blocks = []
+    for capability in capabilities:
+        blocks.append(
+            "\n".join(
+                (
+                    f"### `{capability.capability_id}` — {capability.name}",
+                    "",
+                    capability.purpose,
+                    "",
+                    "**Applicable actor IDs:**",
+                    _markdown_list(capability.actor_ids),
+                    "",
+                    "**Required behavior:**",
+                    _markdown_list(capability.required_behavior),
+                    "",
+                    "**Material business rules:**",
+                    _markdown_list(capability.business_rules),
+                    "",
+                    "**Capability dependency IDs:**",
+                    _markdown_list(capability.dependency_capability_ids),
+                    "",
+                    "**Failure or rejection conditions:**",
+                    _markdown_list(capability.failure_conditions),
+                )
+            )
+        )
+    return "\n\n".join(blocks) if blocks else "- None established."
 
-    lines.extend(
-        [
-            "",
-            "## 8. Cross-Cutting & Non-Functional Requirements",
-            "",
-            cross_cutting.summary,
-        ]
-    )
-    _labeled_items(lines, "Material requirements", cross_cutting.requirements)
 
-    lines.extend(
-        [
-            "",
-            "## 9. Required Responsibility Boundaries",
-            "",
-            responsibility_boundaries.summary,
-        ]
-    )
-    for boundary in responsibility_boundaries.boundaries:
-        lines.extend(["", f"### `{boundary.boundary_id}` — {boundary.name}"])
-        _labeled_items(lines, "Owns", boundary.owns)
-        _labeled_items(lines, "Does not own", boundary.does_not_own)
-        _labeled_items(
-            lines, "May depend on boundary IDs", boundary.may_depend_on_boundary_ids
+def _render_responsibility_boundary_blocks(
+    boundaries: tuple[CanonicalResponsibilityBoundary, ...],
+) -> str:
+    blocks = []
+    for boundary in boundaries:
+        blocks.append(
+            "\n".join(
+                (
+                    f"### `{boundary.boundary_id}` — {boundary.name}",
+                    "",
+                    "**Owns:**",
+                    _markdown_list(boundary.owns),
+                    "",
+                    "**Does not own:**",
+                    _markdown_list(boundary.does_not_own),
+                    "",
+                    "**May depend on boundary IDs:**",
+                    _markdown_list(boundary.may_depend_on_boundary_ids),
+                    "",
+                    "**Must not depend on boundary IDs:**",
+                    _markdown_list(boundary.must_not_depend_on_boundary_ids),
+                    "",
+                    "**Supported capability IDs:**",
+                    _markdown_list(boundary.supported_capability_ids),
+                )
+            )
         )
-        _labeled_items(
-            lines,
-            "Must not depend on boundary IDs",
-            boundary.must_not_depend_on_boundary_ids,
-        )
-        _labeled_items(
-            lines, "Supported capability IDs", boundary.supported_capability_ids
-        )
+    return "\n\n".join(blocks) if blocks else "- None established."
 
-    lines.extend(
-        [
-            "",
-            "## 10. Deferred Decisions & Handoff Constraints",
-            "",
-            deferred.summary,
-        ]
-    )
-    for decision in deferred.decisions:
-        lines.extend(["", f"### `{decision.decision_id}`", "", decision.question])
-        _labeled_text(lines, "Why safe to defer", decision.reason_safe_to_defer)
-        _labeled_items(
-            lines, "Constraints downstream must preserve", decision.downstream_constraints
+
+def _render_deferred_decision_blocks(
+    decisions: tuple[CanonicalDeferredDecision, ...],
+) -> str:
+    blocks = []
+    for decision in decisions:
+        blocks.append(
+            "\n".join(
+                (
+                    f"### `{decision.decision_id}`",
+                    "",
+                    decision.question,
+                    "",
+                    f"**Why safe to defer:** {decision.reason_safe_to_defer}",
+                    "",
+                    "**Constraints downstream must preserve:**",
+                    _markdown_list(decision.downstream_constraints),
+                )
+            )
         )
-    _labeled_items(
-        lines,
-        "Fixed upstream constraints that must not be reopened",
-        deferred.fixed_upstream_constraints,
-    )
-    return "\n".join(lines) + "\n"
+    return "\n\n".join(blocks) if blocks else "- None established."
 
 
 def validate_contract(document: CanonicalRDP) -> tuple[str, ...]:
@@ -435,76 +547,38 @@ def audit_canonical(
 ) -> AuditResult:
     """Run one fresh, independent semantic audit of the exact rendered candidate."""
 
-    result = ai.invoke(
-        operation="audit_canonical",
-        payload={
-            "active_authority": authority,
-            "converged_modeling_result": models.model_dump(mode="json"),
-            "structured_canonical_rdp": document.model_dump(mode="json"),
-            "exact_rendered_markdown_candidate": rendered_markdown,
-            "canonical_audit_contract": {
-                "independence": (
-                    "Perform a fresh independent Canonical Audit. Do not treat Composer "
-                    "output, confidence, or wording as an audit result. Audit findings are "
-                    "derived and never Authority."
-                ),
-                "authority_rules": (
-                    "The Source PRD and accepted, non-superseded Human Decisions in "
-                    "Active Authority are the only Material Authority.",
-                    "Preserve every accepted Human Decision, including the complete "
-                    "selected option plus Human clarification, without reinterpretation.",
-                    "Never provide an authoritative answer to a Material Unknown and "
-                    "never promote an AI recommendation, model, composition, or finding "
-                    "to Authority.",
-                ),
-                "review_at_least": (
-                    "preservation of Source PRD Authority",
-                    "preservation of every accepted non-superseded Human Decision",
-                    "absence of invented material semantics or unresolved Material questions",
-                    "internal consistency",
-                    "release-scope sufficiency for IN, PARTIAL, OUT, and FUTURE capabilities",
-                    "actors, roles, permissions, and domain-semantic sufficiency",
-                    "capability behavior, business-rule, dependency, and failure sufficiency",
-                    "data, decision, and responsibility ownership plus system boundaries",
-                    "high-level architecture constraints, invariants, and dependency direction",
-                    "cross-cutting, security, privacy, and material non-functional requirements",
-                    "safety and constraints of every Deferred Decision",
-                    "Feature decomposition and Required Responsibility Boundary sufficiency",
-                    "self-containment and downstream sufficiency of the exact Markdown",
-                ),
-                "central_question": (
-                    "With ONLY this exact Canonical Markdown and no intermediate artifacts, "
-                    "can SpecKit correctly determine current scope, actors/roles, capabilities, "
-                    "system boundaries, architectural invariants, and cross-feature constraints "
-                    "without making a new Material Decision? If NO, Audit cannot PASS."
-                ),
-                "allowed_outcomes": {
-                    "PASS": (
-                        "The exact Markdown preserves Authority, is consistent, self-contained, "
-                        "and downstream-sufficient; return no remediation and no Decision."
-                    ),
-                    "FAIL_EDITORIAL": (
-                        "Use EDITORIAL only for a non-material representation or completeness "
-                        "defect. Return findings and no Decision."
-                    ),
-                    "FAIL_REMODEL": (
-                        "Use REMODEL when Active Authority contains enough truth but the complete "
-                        "model is wrong or incomplete, or Canonical exposes a model defect. "
-                        "Return findings and no Decision."
-                    ),
-                    "FAIL_HUMAN_DECISION": (
-                        "Use HUMAN_DECISION only when material truth is genuinely absent or "
-                        "ambiguous in Active Authority. Return findings and exactly one pending "
-                        "CANONICALIZATION-origin MATERIAL Decision with one question, context, "
-                        "2-4 materially distinct options, one advisory recommendation, and its "
-                        "rationale. Do not answer the question."
-                    ),
-                },
+    result = TypeAdapter(CANONICAL_AUDIT_RESULT_TYPE).validate_python(
+        ai.invoke(
+            operation="audit_canonical",
+            payload={
+                "active_authority": authority,
+                "converged_modeling_result": models.model_dump(mode="json"),
+                "structured_canonical_rdp": document.model_dump(mode="json"),
+                "exact_rendered_markdown_candidate": rendered_markdown,
             },
-        },
-        result_type=AuditResult,
+            result_type=CANONICAL_AUDIT_RESULT_TYPE,
+        )
     )
-    return TypeAdapter(AuditResult).validate_python(result)
+    if isinstance(result, AuditPassOutput):
+        return AuditResult(status="PASS")
+    if isinstance(result, AuditEditorialOutput):
+        return AuditResult(
+            status="FAIL", findings=result.findings, remediation="EDITORIAL"
+        )
+    if isinstance(result, AuditRemodelOutput):
+        return AuditResult(
+            status="FAIL", findings=result.findings, remediation="REMODEL"
+        )
+    if isinstance(result, AuditHumanDecisionOutput):
+        return AuditResult(
+            status="FAIL",
+            findings=result.findings,
+            remediation="HUMAN_DECISION",
+            decision=material_decision_from_draft(
+                result.decision, WorkflowState.CANONICALIZATION
+            ),
+        )
+    raise TypeError(f"unsupported Audit output: {type(result)!r}")
 
 
 def final_canonical_path(run: WorkflowRun, run_dir: Path) -> Path:
@@ -516,17 +590,6 @@ def final_canonical_path(run: WorkflowRun, run_dir: Path) -> Path:
     if not path.is_file():
         raise FileNotFoundError(f"DONE run is missing canonical-rdp.md: {path}")
     return path
-
-
-def _labeled_text(lines: list[str], label: str, value: str) -> None:
-    if value:
-        lines.extend(["", f"**{label}:** {value}"])
-
-
-def _labeled_items(lines: list[str], label: str, values: tuple[str, ...]) -> None:
-    if values:
-        lines.extend(["", f"**{label}:**"])
-        lines.extend(f"- {value}" for value in values)
 
 
 def _is_blank(value: object) -> bool:

@@ -1,0 +1,106 @@
+{
+  "$defs": {
+    "DomainView": {
+      "additionalProperties": false,
+      "description": "Shallow domain values within a ModelingResult.",
+      "properties": {
+        "concepts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Concepts",
+          "type": "array"
+        },
+        "invariants": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Invariants",
+          "type": "array"
+        },
+        "relationships": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Relationships",
+          "type": "array"
+        },
+        "terminology": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Terminology",
+          "type": "array"
+        }
+      },
+      "required": [
+        "concepts",
+        "relationships",
+        "invariants",
+        "terminology"
+      ],
+      "title": "DomainView",
+      "type": "object"
+    },
+    "ProductContext": {
+      "additionalProperties": false,
+      "description": "Shallow product context within a ModelingResult.",
+      "properties": {
+        "goals": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Goals",
+          "type": "array"
+        },
+        "intended_outcome": {
+          "title": "Intended Outcome",
+          "type": "string"
+        },
+        "non_goals": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Non Goals",
+          "type": "array"
+        },
+        "problem": {
+          "title": "Problem",
+          "type": "string"
+        },
+        "target_users": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Target Users",
+          "type": "array"
+        }
+      },
+      "required": [
+        "problem",
+        "target_users",
+        "intended_outcome",
+        "goals",
+        "non_goals"
+      ],
+      "title": "ProductContext",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Named output of domain derivation.",
+  "properties": {
+    "domain": {
+      "$ref": "#/$defs/DomainView"
+    },
+    "product_context": {
+      "$ref": "#/$defs/ProductContext"
+    }
+  },
+  "required": [
+    "product_context",
+    "domain"
+  ],
+  "title": "DomainOutput",
+  "type": "object"
+}

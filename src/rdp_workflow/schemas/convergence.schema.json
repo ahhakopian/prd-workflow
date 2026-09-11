@@ -1,0 +1,172 @@
+{
+  "$defs": {
+    "ConvergenceHumanDecisionOutput": {
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "$ref": "#/$defs/MaterialDecisionDraft"
+        },
+        "findings": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Findings",
+          "type": "array"
+        },
+        "outcome": {
+          "const": "HUMAN_DECISION",
+          "title": "Outcome",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "outcome",
+        "decision"
+      ],
+      "title": "ConvergenceHumanDecisionOutput",
+      "type": "object"
+    },
+    "ConvergencePassOutput": {
+      "additionalProperties": false,
+      "properties": {
+        "outcome": {
+          "const": "PASS",
+          "title": "Outcome",
+          "type": "string"
+        }
+      },
+      "required": [
+        "outcome"
+      ],
+      "title": "ConvergencePassOutput",
+      "type": "object"
+    },
+    "ConvergenceRemodelOutput": {
+      "additionalProperties": false,
+      "properties": {
+        "findings": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Findings",
+          "type": "array"
+        },
+        "outcome": {
+          "const": "REMODEL",
+          "title": "Outcome",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "outcome"
+      ],
+      "title": "ConvergenceRemodelOutput",
+      "type": "object"
+    },
+    "DecisionOption": {
+      "additionalProperties": false,
+      "description": "One proposed answer and its material consequence.",
+      "properties": {
+        "consequence": {
+          "title": "Consequence",
+          "type": "string"
+        },
+        "option_id": {
+          "title": "Option Id",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "option_id",
+        "text",
+        "consequence"
+      ],
+      "title": "DecisionOption",
+      "type": "object"
+    },
+    "MaterialDecisionDraft": {
+      "additionalProperties": false,
+      "description": "Only the fields an AI supplies for one unresolved material question.",
+      "properties": {
+        "context": {
+          "title": "Context",
+          "type": "string"
+        },
+        "decision_id": {
+          "title": "Decision Id",
+          "type": "string"
+        },
+        "options": {
+          "items": {
+            "$ref": "#/$defs/DecisionOption"
+          },
+          "maxItems": 4,
+          "minItems": 2,
+          "title": "Options",
+          "type": "array"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "recommendation_rationale": {
+          "title": "Recommendation Rationale",
+          "type": "string"
+        },
+        "recommended_option_id": {
+          "title": "Recommended Option Id",
+          "type": "string"
+        },
+        "supersedes_decision_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Supersedes Decision Id"
+        }
+      },
+      "required": [
+        "decision_id",
+        "question",
+        "context",
+        "options",
+        "recommended_option_id",
+        "recommendation_rationale",
+        "supersedes_decision_id"
+      ],
+      "title": "MaterialDecisionDraft",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "HUMAN_DECISION": "#/$defs/ConvergenceHumanDecisionOutput",
+      "PASS": "#/$defs/ConvergencePassOutput",
+      "REMODEL": "#/$defs/ConvergenceRemodelOutput"
+    },
+    "propertyName": "outcome"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ConvergencePassOutput"
+    },
+    {
+      "$ref": "#/$defs/ConvergenceRemodelOutput"
+    },
+    {
+      "$ref": "#/$defs/ConvergenceHumanDecisionOutput"
+    }
+  ]
+}

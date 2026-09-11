@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 
+from rdp_workflow.ai_contracts import MaterialDecisionDraft
 from rdp_workflow.models import (
     CustomAnswer,
     Decision,
@@ -19,7 +20,7 @@ from rdp_workflow.workflow import WorkflowService
 
 
 class ScriptedAI:
-    def __init__(self, *results: Decision | None) -> None:
+    def __init__(self, *results: MaterialDecisionDraft | None) -> None:
         self.results = list(results)
         self.calls: list[dict[str, object]] = []
 
@@ -58,6 +59,18 @@ def intake_decision() -> Decision:
     )
 
 
+def intake_decision_draft() -> MaterialDecisionDraft:
+    decision = intake_decision()
+    return MaterialDecisionDraft(
+        decision_id=decision.decision_id,
+        question=decision.question,
+        context=decision.context,
+        options=decision.options,
+        recommended_option_id=decision.recommended_option_id,
+        recommendation_rationale=decision.recommendation_rationale,
+    )
+
+
 def service_at(tmp_path: Path, ai: ScriptedAI) -> WorkflowService:
     return WorkflowService(FileStorage(tmp_path / ".rdp"), ai)
 
@@ -85,7 +98,7 @@ def test_workflow_intake_without_blocker_transitions_to_modeling_and_persists(
 def test_workflow_intake_with_material_unknown_pauses_with_one_persisted_decision(
     tmp_path: Path,
 ) -> None:
-    ai = ScriptedAI(intake_decision())
+    ai = ScriptedAI(intake_decision_draft())
     service = service_at(tmp_path, ai)
     started = service.start(source_at(tmp_path))
 
@@ -115,7 +128,7 @@ def test_workflow_accepts_and_persists_each_human_answer_form(
     tmp_path: Path,
     answer: HumanAnswer,
 ) -> None:
-    ai = ScriptedAI(intake_decision())
+    ai = ScriptedAI(intake_decision_draft())
     service = service_at(tmp_path, ai)
     started = service.start(source_at(tmp_path))
     service.advance(started.run_id)
@@ -134,7 +147,7 @@ def test_workflow_resume_rechecks_intake_with_answer_in_active_authority(
     tmp_path: Path,
 ) -> None:
     clarification = "  Only before the manager records review.  "
-    ai = ScriptedAI(intake_decision(), None)
+    ai = ScriptedAI(intake_decision_draft(), None)
     service = service_at(tmp_path, ai)
     started = service.start(source_at(tmp_path))
     service.advance(started.run_id)
@@ -162,7 +175,7 @@ def test_workflow_resume_rechecks_intake_with_answer_in_active_authority(
 def test_workflow_cannot_advance_while_waiting_for_human_answer(
     tmp_path: Path,
 ) -> None:
-    ai = ScriptedAI(intake_decision())
+    ai = ScriptedAI(intake_decision_draft())
     service = service_at(tmp_path, ai)
     started = service.start(source_at(tmp_path))
     service.advance(started.run_id)

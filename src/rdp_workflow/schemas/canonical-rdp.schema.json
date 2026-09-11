@@ -1,0 +1,700 @@
+{
+  "$defs": {
+    "CanonicalActor": {
+      "additionalProperties": false,
+      "description": "One human, system, or external actor referenced by the document.",
+      "properties": {
+        "actor_id": {
+          "title": "Actor Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "HUMAN",
+            "SYSTEM",
+            "EXTERNAL"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "may_do": {
+          "items": {
+            "type": "string"
+          },
+          "title": "May Do",
+          "type": "array"
+        },
+        "must_do": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Must Do",
+          "type": "array"
+        },
+        "must_not_do": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Must Not Do",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "permission_boundaries": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Permission Boundaries",
+          "type": "array"
+        },
+        "purpose": {
+          "title": "Purpose",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actor_id",
+        "name",
+        "kind",
+        "purpose",
+        "may_do",
+        "must_do",
+        "must_not_do",
+        "permission_boundaries"
+      ],
+      "title": "CanonicalActor",
+      "type": "object"
+    },
+    "CanonicalActorsAndRoles": {
+      "additionalProperties": false,
+      "description": "All material actors and their role or permission semantics.",
+      "properties": {
+        "actors": {
+          "items": {
+            "$ref": "#/$defs/CanonicalActor"
+          },
+          "title": "Actors",
+          "type": "array"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "summary",
+        "actors"
+      ],
+      "title": "CanonicalActorsAndRoles",
+      "type": "object"
+    },
+    "CanonicalArchitecture": {
+      "additionalProperties": false,
+      "description": "Only high-level architectural constraints downstream must preserve.",
+      "properties": {
+        "constraints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Constraints",
+          "type": "array"
+        },
+        "dependency_directions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dependency Directions",
+          "type": "array"
+        },
+        "interactions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Interactions",
+          "type": "array"
+        },
+        "invariants": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Invariants",
+          "type": "array"
+        },
+        "non_responsibilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Non Responsibilities",
+          "type": "array"
+        },
+        "responsibility_areas": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Responsibility Areas",
+          "type": "array"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "summary",
+        "responsibility_areas",
+        "non_responsibilities",
+        "interactions",
+        "constraints",
+        "invariants",
+        "dependency_directions"
+      ],
+      "title": "CanonicalArchitecture",
+      "type": "object"
+    },
+    "CanonicalCapability": {
+      "additionalProperties": false,
+      "description": "One material user or business capability.",
+      "properties": {
+        "actor_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Actor Ids",
+          "type": "array"
+        },
+        "business_rules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Business Rules",
+          "type": "array"
+        },
+        "capability_id": {
+          "title": "Capability Id",
+          "type": "string"
+        },
+        "dependency_capability_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dependency Capability Ids",
+          "type": "array"
+        },
+        "failure_conditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Failure Conditions",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "purpose": {
+          "title": "Purpose",
+          "type": "string"
+        },
+        "required_behavior": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Behavior",
+          "type": "array"
+        }
+      },
+      "required": [
+        "capability_id",
+        "name",
+        "purpose",
+        "actor_ids",
+        "required_behavior",
+        "business_rules",
+        "dependency_capability_ids",
+        "failure_conditions"
+      ],
+      "title": "CanonicalCapability",
+      "type": "object"
+    },
+    "CanonicalCrossCuttingRequirements": {
+      "additionalProperties": false,
+      "description": "Material cross-capability and non-functional requirements.",
+      "properties": {
+        "requirements": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Requirements",
+          "type": "array"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "summary",
+        "requirements"
+      ],
+      "title": "CanonicalCrossCuttingRequirements",
+      "type": "object"
+    },
+    "CanonicalDeferredDecision": {
+      "additionalProperties": false,
+      "description": "One undecided matter proven safe for downstream resolution.",
+      "properties": {
+        "decision_id": {
+          "title": "Decision Id",
+          "type": "string"
+        },
+        "downstream_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Downstream Constraints",
+          "type": "array"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "reason_safe_to_defer": {
+          "title": "Reason Safe To Defer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "decision_id",
+        "question",
+        "reason_safe_to_defer",
+        "downstream_constraints"
+      ],
+      "title": "CanonicalDeferredDecision",
+      "type": "object"
+    },
+    "CanonicalDeferredDecisions": {
+      "additionalProperties": false,
+      "description": "Safe deferrals and the upstream constraints that must remain fixed.",
+      "properties": {
+        "decisions": {
+          "items": {
+            "$ref": "#/$defs/CanonicalDeferredDecision"
+          },
+          "title": "Decisions",
+          "type": "array"
+        },
+        "fixed_upstream_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fixed Upstream Constraints",
+          "type": "array"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "summary",
+        "decisions",
+        "fixed_upstream_constraints"
+      ],
+      "title": "CanonicalDeferredDecisions",
+      "type": "object"
+    },
+    "CanonicalDomainModel": {
+      "additionalProperties": false,
+      "description": "Shared business meaning without implementation structure.",
+      "properties": {
+        "concepts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Concepts",
+          "type": "array"
+        },
+        "invariants": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Invariants",
+          "type": "array"
+        },
+        "relationships": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Relationships",
+          "type": "array"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "terminology": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Terminology",
+          "type": "array"
+        }
+      },
+      "required": [
+        "summary",
+        "concepts",
+        "relationships",
+        "invariants",
+        "terminology"
+      ],
+      "title": "CanonicalDomainModel",
+      "type": "object"
+    },
+    "CanonicalFunctionalCapabilities": {
+      "additionalProperties": false,
+      "description": "Material capabilities whose release status is defined by CanonicalScope.",
+      "properties": {
+        "capabilities": {
+          "items": {
+            "$ref": "#/$defs/CanonicalCapability"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "summary",
+        "capabilities"
+      ],
+      "title": "CanonicalFunctionalCapabilities",
+      "type": "object"
+    },
+    "CanonicalProductDefinition": {
+      "additionalProperties": false,
+      "description": "Product intent and its explicitly identified goals and non-goals.",
+      "properties": {
+        "goals": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Goals",
+          "type": "array"
+        },
+        "intended_outcome": {
+          "title": "Intended Outcome",
+          "type": "string"
+        },
+        "non_goals": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Non Goals",
+          "type": "array"
+        },
+        "problem": {
+          "title": "Problem",
+          "type": "string"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "target_actor_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Target Actor Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "summary",
+        "problem",
+        "target_actor_ids",
+        "intended_outcome",
+        "goals",
+        "non_goals"
+      ],
+      "title": "CanonicalProductDefinition",
+      "type": "object"
+    },
+    "CanonicalResponsibilityBoundaries": {
+      "additionalProperties": false,
+      "description": "Normative responsibility boundaries for downstream decomposition.",
+      "properties": {
+        "boundaries": {
+          "items": {
+            "$ref": "#/$defs/CanonicalResponsibilityBoundary"
+          },
+          "title": "Boundaries",
+          "type": "array"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "summary",
+        "boundaries"
+      ],
+      "title": "CanonicalResponsibilityBoundaries",
+      "type": "object"
+    },
+    "CanonicalResponsibilityBoundary": {
+      "additionalProperties": false,
+      "description": "A boundary downstream Feature decomposition must preserve.",
+      "properties": {
+        "boundary_id": {
+          "title": "Boundary Id",
+          "type": "string"
+        },
+        "does_not_own": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Does Not Own",
+          "type": "array"
+        },
+        "may_depend_on_boundary_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "May Depend On Boundary Ids",
+          "type": "array"
+        },
+        "must_not_depend_on_boundary_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Must Not Depend On Boundary Ids",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "owns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Owns",
+          "type": "array"
+        },
+        "supported_capability_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supported Capability Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "boundary_id",
+        "name",
+        "owns",
+        "does_not_own",
+        "may_depend_on_boundary_ids",
+        "must_not_depend_on_boundary_ids",
+        "supported_capability_ids"
+      ],
+      "title": "CanonicalResponsibilityBoundary",
+      "type": "object"
+    },
+    "CanonicalScope": {
+      "additionalProperties": false,
+      "description": "Target release and the explicit scope of every material capability.",
+      "properties": {
+        "capabilities": {
+          "items": {
+            "$ref": "#/$defs/CanonicalScopeEntry"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "target_release": {
+          "title": "Target Release",
+          "type": "string"
+        }
+      },
+      "required": [
+        "summary",
+        "target_release",
+        "capabilities"
+      ],
+      "title": "CanonicalScope",
+      "type": "object"
+    },
+    "CanonicalScopeEntry": {
+      "additionalProperties": false,
+      "description": "The target-release classification for one material capability.",
+      "properties": {
+        "capability_id": {
+          "title": "Capability Id",
+          "type": "string"
+        },
+        "excluded": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Excluded",
+          "type": "array"
+        },
+        "included": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Included",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "IN",
+            "PARTIAL",
+            "OUT",
+            "FUTURE"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "capability_id",
+        "status",
+        "included",
+        "excluded"
+      ],
+      "title": "CanonicalScopeEntry",
+      "type": "object"
+    },
+    "CanonicalSystemBoundaries": {
+      "additionalProperties": false,
+      "description": "Inside/outside responsibilities, dependencies, and ownership.",
+      "properties": {
+        "data_ownership": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Data Ownership",
+          "type": "array"
+        },
+        "decision_ownership": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Decision Ownership",
+          "type": "array"
+        },
+        "external_dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "title": "External Dependencies",
+          "type": "array"
+        },
+        "inside_system": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Inside System",
+          "type": "array"
+        },
+        "outside_system": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Outside System",
+          "type": "array"
+        },
+        "responsibility_ownership": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Responsibility Ownership",
+          "type": "array"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "systems_of_record": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Systems Of Record",
+          "type": "array"
+        }
+      },
+      "required": [
+        "summary",
+        "inside_system",
+        "outside_system",
+        "external_dependencies",
+        "data_ownership",
+        "decision_ownership",
+        "responsibility_ownership",
+        "systems_of_record"
+      ],
+      "title": "CanonicalSystemBoundaries",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The ten required sections of a Canonical RDP candidate.",
+  "properties": {
+    "actors_and_roles": {
+      "$ref": "#/$defs/CanonicalActorsAndRoles"
+    },
+    "cross_cutting_and_non_functional_requirements": {
+      "$ref": "#/$defs/CanonicalCrossCuttingRequirements"
+    },
+    "deferred_decisions_and_handoff_constraints": {
+      "$ref": "#/$defs/CanonicalDeferredDecisions"
+    },
+    "domain_model": {
+      "$ref": "#/$defs/CanonicalDomainModel"
+    },
+    "functional_capabilities": {
+      "$ref": "#/$defs/CanonicalFunctionalCapabilities"
+    },
+    "high_level_architecture": {
+      "$ref": "#/$defs/CanonicalArchitecture"
+    },
+    "product_definition": {
+      "$ref": "#/$defs/CanonicalProductDefinition"
+    },
+    "required_responsibility_boundaries": {
+      "$ref": "#/$defs/CanonicalResponsibilityBoundaries"
+    },
+    "scope_and_release_boundary": {
+      "$ref": "#/$defs/CanonicalScope"
+    },
+    "system_boundaries_and_ownership": {
+      "$ref": "#/$defs/CanonicalSystemBoundaries"
+    }
+  },
+  "required": [
+    "product_definition",
+    "scope_and_release_boundary",
+    "actors_and_roles",
+    "domain_model",
+    "functional_capabilities",
+    "system_boundaries_and_ownership",
+    "high_level_architecture",
+    "cross_cutting_and_non_functional_requirements",
+    "required_responsibility_boundaries",
+    "deferred_decisions_and_handoff_constraints"
+  ],
+  "title": "CanonicalRDP",
+  "type": "object"
+}

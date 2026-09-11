@@ -7,10 +7,21 @@ from typing import Any
 
 import pytest
 
+import rdp_workflow.canonical as canonical_module
+
+from rdp_workflow.ai import load_prompt
+from rdp_workflow.ai_contracts import (
+    AuditEditorialOutput,
+    AuditHumanDecisionOutput,
+    AuditPassOutput,
+    AuditRemodelOutput,
+    MaterialDecisionDraft,
+)
 from rdp_workflow.canonical import (
     audit_canonical,
     compose_canonical,
     final_canonical_path,
+    load_canonical_template,
     render_markdown,
     validate_contract,
 )
@@ -216,7 +227,7 @@ def canonical_document(label: str = "candidate") -> CanonicalRDP:
     )
 
 
-def test_composer_receives_authority_converged_model_and_self_contained_contract() -> None:
+def test_composer_receives_only_authority_converged_model_and_findings() -> None:
     authority = {
         "source_prd": "# Expenses",
         "human_decisions": ({"answer": {"text": "Human authority"}},),
@@ -235,23 +246,23 @@ def test_composer_receives_authority_converged_model_and_self_contained_contract
     assert payload["previous_editorial_or_validation_findings"] == (
         "Clarify scope text.",
     )
-    contract = json.dumps(payload["canonical_composer_contract"])
-    assert "ten required sections" in contract
-    assert "non-authoritative" in contract
-    assert "accepted, non-superseded Human Decisions" in contract
-    assert "invent product behavior" in contract
-    assert "answer a Material Unknown" in contract
-    assert "Previous findings are non-authoritative" in contract
+    assert set(payload) == {
+        "active_authority",
+        "converged_modeling_result",
+        "previous_editorial_or_validation_findings",
+    }
+    assert "contract" not in json.dumps(payload)
 
 
 def test_renderer_is_deterministic_and_emits_exactly_ten_normative_sections() -> None:
     document = canonical_document()
+    template = load_canonical_template()
 
     first = render_markdown(document)
     second = render_markdown(document.model_copy(deep=True))
 
     assert first == second
-    assert re.findall(r"^## \d+\. .+$", first, flags=re.MULTILINE) == [
+    expected_headings = [
         "## 1. Product Definition",
         "## 2. Scope & Release Boundary",
         "## 3. Actors & Roles",
@@ -263,6 +274,47 @@ def test_renderer_is_deterministic_and_emits_exactly_ten_normative_sections() ->
         "## 9. Required Responsibility Boundaries",
         "## 10. Deferred Decisions & Handoff Constraints",
     ]
+    expected_placeholders = list(canonical_module._TEMPLATE_PLACEHOLDERS)
+    assert re.findall(r"^## \d+\. .+$", template, flags=re.MULTILINE) == expected_headings
+    assert re.findall(r"\{\{[^{}\n]+\}\}", template) == expected_placeholders
+    assert all(template.count(placeholder) == 1 for placeholder in expected_placeholders)
+    assert [title for _, title in canonical_module._SECTION_FIELDS_AND_TITLES] == [
+        heading.removeprefix(f"## {index}. ")
+        for index, heading in enumerate(expected_headings, start=1)
+    ]
+    assert re.findall(r"^\d+\. .+$", load_prompt("compose_canonical"), flags=re.MULTILINE) == [
+        heading.removeprefix("## ") for heading in expected_headings
+    ]
+    assert re.findall(r"^## \d+\. .+$", first, flags=re.MULTILINE) == expected_headings
+    assert re.search(r"\{\{[^{}\n]+\}\}", first) is None
+    assert "### Capability `submit-expense` — PARTIAL" in first
+    assert "### `employee` — Employee (HUMAN)" in first
+    assert "### `submit-expense` — Submit expense" in first
+    assert "### `expense-intake` — Expense intake" in first
+    assert "### `internal-module-names`" in first
+    assert "- None established." in first
+
+
+def test_renderer_rejects_invalid_or_unreplaced_template_placeholders(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    template = load_canonical_template()
+    placeholder = "{{PRODUCT_SUMMARY}}"
+    invalid_templates = (
+        template.replace(placeholder, "", 1),
+        template + placeholder,
+        template + "{{UNKNOWN_SECTION}}\n",
+    )
+    for invalid in invalid_templates:
+        monkeypatch.setattr(canonical_module, "load_canonical_template", lambda: invalid)
+        with pytest.raises(ValueError, match="invalid Canonical template placeholders"):
+            render_markdown(canonical_document())
+
+    unresolved = canonical_document().model_copy(deep=True)
+    unresolved.product_definition.summary = placeholder
+    monkeypatch.setattr(canonical_module, "load_canonical_template", lambda: template)
+    with pytest.raises(ValueError, match="unreplaced placeholder"):
+        render_markdown(unresolved)
 
 
 def test_contract_validation_rejects_missing_sections_and_required_content() -> None:
@@ -358,12 +410,12 @@ def test_contract_validation_enforces_identifiers_deferrals_and_boundaries() -> 
     assert "material_open_questions" not in CanonicalRDP.model_fields
 
 
-def test_audit_is_fresh_and_receives_structured_document_and_exact_markdown() -> None:
+def test_audit_receives_only_current_runtime_inputs() -> None:
     authority = {"source_prd": "# Expenses", "human_decisions": ()}
     models = modeling_result()
     document = canonical_document()
     exact_markdown = render_markdown(document)
-    ai = ScriptedAI(AuditResult(status="PASS"))
+    ai = ScriptedAI(AuditPassOutput(outcome="PASS"))
 
     result = audit_canonical(authority, models, document, exact_markdown, ai)
 
@@ -374,11 +426,101 @@ def test_audit_is_fresh_and_receives_structured_document_and_exact_markdown() ->
     assert payload["converged_modeling_result"] == models.model_dump(mode="json")
     assert payload["structured_canonical_rdp"] == document.model_dump(mode="json")
     assert payload["exact_rendered_markdown_candidate"] == exact_markdown
-    contract = json.dumps(payload["canonical_audit_contract"])
-    assert "fresh independent Canonical Audit" in contract
-    assert "With ONLY this exact Canonical Markdown" in contract
-    assert "If NO, Audit cannot PASS" in contract
-    assert "never Authority" in contract
+    assert set(payload) == {
+        "active_authority",
+        "converged_modeling_result",
+        "structured_canonical_rdp",
+        "exact_rendered_markdown_candidate",
+    }
+    assert "contract" not in json.dumps(payload)
+
+
+@pytest.mark.parametrize(
+    ("provider_output", "expected"),
+    (
+        (AuditPassOutput(outcome="PASS"), AuditResult(status="PASS")),
+        (
+            AuditEditorialOutput(
+                outcome="EDITORIAL", findings=("Clarify wording.",)
+            ),
+            AuditResult(
+                status="FAIL",
+                findings=("Clarify wording.",),
+                remediation="EDITORIAL",
+            ),
+        ),
+        (
+            AuditRemodelOutput(
+                outcome="REMODEL", findings=("Rebuild ownership.",)
+            ),
+            AuditResult(
+                status="FAIL",
+                findings=("Rebuild ownership.",),
+                remediation="REMODEL",
+            ),
+        ),
+    ),
+)
+def test_audit_ai_outcomes_convert_to_existing_audit_result(
+    provider_output: object,
+    expected: AuditResult,
+) -> None:
+    document = canonical_document()
+    result = audit_canonical(
+        {},
+        modeling_result(),
+        document,
+        render_markdown(document),
+        ScriptedAI(provider_output),
+    )
+
+    assert result == expected
+
+
+def test_audit_human_decision_draft_gets_canonicalization_lifecycle_fields() -> None:
+    expected = Decision(
+        decision_id="audit-decision",
+        classification="MATERIAL",
+        origin_state=WorkflowState.CANONICALIZATION,
+        question="Which material policy applies?",
+        context="The answer changes product behavior.",
+        options=(
+            DecisionOption(option_id="A", text="Policy A", consequence="Effect A"),
+            DecisionOption(option_id="B", text="Policy B", consequence="Effect B"),
+        ),
+        recommended_option_id="A",
+        recommendation_rationale="Policy A is simpler.",
+    )
+    draft = MaterialDecisionDraft(
+        decision_id=expected.decision_id,
+        question=expected.question,
+        context=expected.context,
+        options=expected.options,
+        recommended_option_id=expected.recommended_option_id,
+        recommendation_rationale=expected.recommendation_rationale,
+    )
+    document = canonical_document()
+
+    result = audit_canonical(
+        {},
+        modeling_result(),
+        document,
+        render_markdown(document),
+        ScriptedAI(
+            AuditHumanDecisionOutput(
+                outcome="HUMAN_DECISION",
+                findings=("Material policy is absent.",),
+                decision=draft,
+            )
+        ),
+    )
+
+    assert result == AuditResult(
+        status="FAIL",
+        findings=("Material policy is absent.",),
+        remediation="HUMAN_DECISION",
+        decision=expected,
+    )
 
 
 def test_audit_result_strictly_ties_each_outcome_to_its_allowed_payload() -> None:

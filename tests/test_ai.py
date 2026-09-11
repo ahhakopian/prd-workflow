@@ -5,16 +5,16 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import ValidationError
 
-from rdp_workflow.ai import CodexAIExecutor
-
-
-class ExampleResult(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    answer: str
-    detail: str | None = None
+from rdp_workflow.ai import (
+    CONVERGENCE_RESULT_TYPE,
+    CodexAIExecutor,
+    load_committed_schema,
+    load_prompt,
+    result_type_for_operation,
+)
+from rdp_workflow.ai_contracts import ConvergencePassOutput
 
 
 def test_codex_adapter_requests_strict_schema_and_validates_final_output(
@@ -28,20 +28,21 @@ def test_codex_adapter_requests_strict_schema_and_validates_final_output(
         observed["command"] = command
         observed["request"] = json.loads(str(kwargs["input"]))
         observed["schema"] = json.loads(schema_path.read_text(encoding="utf-8"))
+        observed["schema_name"] = schema_path.name
         output_path.write_text(
-            '{"answer":"validated","detail":null}', encoding="utf-8"
+            ConvergencePassOutput(outcome="PASS").model_dump_json(), encoding="utf-8"
         )
         return subprocess.CompletedProcess(command, 0, "", "")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     result = CodexAIExecutor().invoke(
-        operation="intake",
+        operation="review_convergence",
         payload={"source_prd": "# Product"},
-        result_type=ExampleResult,
+        result_type=CONVERGENCE_RESULT_TYPE,
     )
 
-    assert result == ExampleResult(answer="validated")
+    assert result == ConvergencePassOutput(outcome="PASS")
     assert "--ignore-user-config" in observed["command"]
     assert "--ignore-rules" in observed["command"]
     assert "--ephemeral" in observed["command"]
@@ -49,15 +50,14 @@ def test_codex_adapter_requests_strict_schema_and_validates_final_output(
     assert "--output-schema" in observed["command"]
     assert "--output-last-message" in observed["command"]
     assert observed["request"] == {
-        "instruction": (
-            "Perform only the supplied workflow analysis operation. Use only the "
-            "supplied payload as authority and return one JSON value matching the "
-            "output schema."
-        ),
-        "operation": "intake",
+        "instruction": load_prompt("review_convergence"),
+        "operation": "review_convergence",
         "payload": {"source_prd": "# Product"},
     }
-    assert observed["schema"]["required"] == ["answer", "detail"]
+    assert observed["schema_name"] == "convergence.schema.json"
+    assert observed["schema"] == load_committed_schema("review_convergence")
+    assert observed["schema"]["discriminator"]["propertyName"] == "outcome"
+    assert len(observed["schema"]["oneOf"]) == 3
 
 
 def test_codex_adapter_rejects_output_that_does_not_match_the_result_type(
@@ -72,9 +72,9 @@ def test_codex_adapter_rejects_output_that_does_not_match_the_result_type(
 
     with pytest.raises(ValidationError):
         CodexAIExecutor().invoke(
-            operation="intake",
+            operation="review_convergence",
             payload={},
-            result_type=ExampleResult,
+            result_type=CONVERGENCE_RESULT_TYPE,
         )
 
 
@@ -92,9 +92,54 @@ def test_codex_adapter_reports_one_failed_invocation_without_retrying(
 
     with pytest.raises(RuntimeError, match="provider unavailable"):
         CodexAIExecutor().invoke(
-            operation="intake",
+            operation="review_convergence",
             payload={},
-            result_type=ExampleResult,
+            result_type=CONVERGENCE_RESULT_TYPE,
         )
 
     assert calls == 1
+
+
+@pytest.mark.parametrize(
+    "operation",
+    (
+        "intake",
+        "derive_domain",
+        "derive_capabilities",
+        "derive_architecture",
+        "review_convergence",
+        "compose_canonical",
+        "audit_canonical",
+    ),
+)
+def test_codex_adapter_uses_correct_packaged_prompt_for_every_operation(
+    operation: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed_request: dict[str, object] = {}
+
+    def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        observed_request.update(json.loads(str(kwargs["input"])))
+        return subprocess.CompletedProcess(command, 7, "", "stop after request capture")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    with pytest.raises(RuntimeError, match="stop after request capture"):
+        CodexAIExecutor().invoke(
+            operation=operation,
+            payload={"runtime": "data"},
+            result_type=result_type_for_operation(operation),
+        )
+
+    assert observed_request["instruction"] == load_prompt(operation)
+    assert observed_request["operation"] == operation
+    assert observed_request["payload"] == {"runtime": "data"}
+
+
+def test_codex_adapter_rejects_unknown_operations_explicitly() -> None:
+    with pytest.raises(ValueError, match="unknown AI operation"):
+        CodexAIExecutor().invoke(
+            operation="unknown",
+            payload={},
+            result_type=CONVERGENCE_RESULT_TYPE,
+        )

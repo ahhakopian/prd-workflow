@@ -5,6 +5,17 @@ from typing import Any
 
 import pytest
 
+from rdp_workflow.ai_contracts import (
+    ArchitectureOutput,
+    AuditEditorialOutput,
+    AuditHumanDecisionOutput,
+    AuditPassOutput,
+    AuditRemodelOutput,
+    CapabilitiesOutput,
+    ConvergencePassOutput,
+    DomainOutput,
+    MaterialDecisionDraft,
+)
 from rdp_workflow.canonical import final_canonical_path, render_markdown
 from rdp_workflow.models import (
     ArchitectureView,
@@ -92,6 +103,18 @@ def canonical_decision() -> Decision:
     )
 
 
+def canonical_decision_draft() -> MaterialDecisionDraft:
+    decision = canonical_decision()
+    return MaterialDecisionDraft(
+        decision_id=decision.decision_id,
+        question=decision.question,
+        context=decision.context,
+        options=decision.options,
+        recommended_option_id=decision.recommended_option_id,
+        recommendation_rationale=decision.recommendation_rationale,
+    )
+
+
 def rebuilt_model_outputs() -> tuple[object, object, object]:
     product = ProductContext(
         problem="Employees need rebuilt reimbursement support.",
@@ -116,7 +139,11 @@ def rebuilt_model_outputs() -> tuple[object, object, object]:
         responsibility_areas=("Rebuilt expense intake",),
         system_boundaries=("Payment stays external.",),
     )
-    return (product, domain), capabilities, (architecture, ())
+    return (
+        DomainOutput(product_context=product, domain=domain),
+        CapabilitiesOutput(capabilities=capabilities),
+        ArchitectureOutput(architecture=architecture, deferred_decisions=()),
+    )
 
 
 def test_composer_cannot_run_without_convergence_pass(tmp_path: Path) -> None:
@@ -142,7 +169,7 @@ def test_validation_failure_stays_in_canonicalization_and_is_reprocessed(
     invalid = canonical_document("invalid").model_copy(deep=True)
     invalid.scope_and_release_boundary.capabilities = ()
     corrected = canonical_document("corrected")
-    ai = ScriptedAI(invalid, corrected, AuditResult(status="PASS"))
+    ai = ScriptedAI(invalid, corrected, AuditPassOutput(outcome="PASS"))
     service, run_id = service_in_canonicalization(tmp_path, ai)
 
     failed = service.advance(run_id)
@@ -179,7 +206,14 @@ def test_editorial_failure_recomposes_and_reaudits_next_candidate(
         findings=("Clarify one non-material cross-reference.",),
         remediation="EDITORIAL",
     )
-    ai = ScriptedAI(first, editorial, second, AuditResult(status="PASS"))
+    ai = ScriptedAI(
+        first,
+        AuditEditorialOutput(
+            outcome="EDITORIAL", findings=editorial.findings
+        ),
+        second,
+        AuditPassOutput(outcome="PASS"),
+    )
     service, run_id = service_in_canonicalization(tmp_path, ai)
 
     failed = service.advance(run_id)
@@ -207,14 +241,11 @@ def test_audit_remodel_returns_to_modeling_and_rebuilds_complete_model_set(
     tmp_path: Path,
 ) -> None:
     finding = "The model omitted authoritative approval ownership."
-    remodel = AuditResult(
-        status="FAIL", findings=(finding,), remediation="REMODEL"
-    )
     ai = ScriptedAI(
         canonical_document(),
-        remodel,
+        AuditRemodelOutput(outcome="REMODEL", findings=(finding,)),
         *rebuilt_model_outputs(),
-        ConvergenceResult(status="PASS"),
+        ConvergencePassOutput(outcome="PASS"),
     )
     service, run_id = service_in_canonicalization(tmp_path, ai)
 
@@ -245,11 +276,10 @@ def test_audit_remodel_returns_to_modeling_and_rebuilds_complete_model_set(
 def test_audit_human_decision_waits_then_answer_clears_every_old_derived_value(
     tmp_path: Path,
 ) -> None:
-    audit = AuditResult(
-        status="FAIL",
+    audit = AuditHumanDecisionOutput(
+        outcome="HUMAN_DECISION",
         findings=("Authority does not define post-submission edits.",),
-        remediation="HUMAN_DECISION",
-        decision=canonical_decision(),
+        decision=canonical_decision_draft(),
     )
     ai = ScriptedAI(canonical_document(), audit)
     service, run_id = service_in_canonicalization(tmp_path, ai)
@@ -339,7 +369,7 @@ def test_both_validation_and_audit_pass_write_exact_markdown_before_done(
             super().save_run(run)
 
     candidate = canonical_document()
-    ai = ScriptedAI(candidate, AuditResult(status="PASS"))
+    ai = ScriptedAI(candidate, AuditPassOutput(outcome="PASS"))
     storage = OrderingStorage(tmp_path / ".rdp")
     service = WorkflowService(storage, ai)
     run = service.start(source_at(tmp_path))

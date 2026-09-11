@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 import rdp_workflow.cli as cli
+from rdp_workflow.ai_contracts import MaterialDecisionDraft
 from rdp_workflow.models import (
     CustomAnswer,
     Decision,
@@ -73,6 +74,18 @@ def pending_decision(
         recommended_option_id="A",
         recommendation_rationale="Immutability gives the simplest audit trail.",
         supersedes_decision_id=supersedes_decision_id,
+    )
+
+
+def pending_decision_draft(decision: Decision) -> MaterialDecisionDraft:
+    return MaterialDecisionDraft(
+        decision_id=decision.decision_id,
+        question=decision.question,
+        context=decision.context,
+        options=decision.options,
+        recommended_option_id=decision.recommended_option_id,
+        recommendation_rationale=decision.recommendation_rationale,
+        supersedes_decision_id=decision.supersedes_decision_id,
     )
 
 
@@ -210,7 +223,7 @@ def test_cli_waiting_human_display_is_complete_and_labels_recommendation_advisor
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     decision = pending_decision(origin=WorkflowState.INTAKE)
-    ai = ScriptedAI(decision)
+    ai = ScriptedAI(pending_decision_draft(decision))
     install_ai(monkeypatch, tmp_path, ai)
     run = FileStorage().create_run(source_at(tmp_path), run_id="waiting-run")
 
