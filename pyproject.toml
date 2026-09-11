@@ -11,6 +11,9 @@ dependencies = [
     "pydantic>=2.0,<3.0",
 ]
 
+[project.scripts]
+rdp = "rdp_workflow.cli:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.0,<9.0",
@@ -23,4 +26,3 @@ packages = ["src/rdp_workflow"]
 addopts = "-q"
 pythonpath = ["src"]
 testpaths = ["tests"]
-
