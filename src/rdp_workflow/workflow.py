@@ -6,6 +6,12 @@ from pathlib import Path
 
 from rdp_workflow.ai import AIExecutor
 from rdp_workflow.analysis import analyze_intake, derive_models, review_convergence
+from rdp_workflow.canonical import (
+    audit_canonical,
+    compose_canonical,
+    render_markdown,
+    validate_contract,
+)
 from rdp_workflow.decisions import accept_answer, active_authority
 from rdp_workflow.models import HumanAnswer, WorkflowRun, WorkflowState
 from rdp_workflow.storage import FileStorage
@@ -91,11 +97,13 @@ class WorkflowService:
                 return self._advance_intake(run)
             case WorkflowState.MODELING:
                 return self._advance_modeling(run)
+            case WorkflowState.CANONICALIZATION:
+                return self._advance_canonicalization(run)
             case WorkflowState.WAITING_HUMAN:
                 raise ValueError("workflow is waiting for the current Human Decision")
             case _:
                 raise NotImplementedError(
-                    f"{run.state.value} execution is deferred beyond Slice 3"
+                    f"{run.state.value} has no active phase execution"
                 )
 
     def answer(
@@ -106,19 +114,16 @@ class WorkflowService:
     ) -> WorkflowRun:
         run = self.storage.load_run(run_id)
         origin = run.pending_decision_origin
-        if run.state is WorkflowState.WAITING_HUMAN and origin is WorkflowState.CANONICALIZATION:
-            raise NotImplementedError(
-                "CANONICALIZATION-origin Human Decisions are deferred beyond Slice 3"
-            )
 
         accept_answer(run, decision_id, answer)
         if origin is WorkflowState.INTAKE:
             transition(run, WorkflowState.INTAKE)
-        elif origin is WorkflowState.MODELING:
+        elif origin in {WorkflowState.MODELING, WorkflowState.CANONICALIZATION}:
             run.modeling_result = None
             run.convergence_result = None
             run.canonical_candidate = None
             run.audit_result = None
+            run.diagnostics = ()
             transition(run, WorkflowState.MODELING)
         else:  # accept_answer rejects a missing or inconsistent pending origin first
             raise ValueError("pending Decision has no supported origin")
@@ -165,13 +170,14 @@ class WorkflowService:
             if run.convergence_result is not None
             and run.convergence_result.status == "FAIL"
             and run.convergence_result.remediation == "REMODEL"
-            else ()
+            else run.diagnostics
         )
         models = derive_models(authority, prior_findings, self.ai)
         convergence = review_convergence(authority, models, self.ai)
 
         run.modeling_result = models
         run.convergence_result = convergence
+        run.diagnostics = ()
 
         if convergence.status == "PASS":
             transition(run, WorkflowState.CANONICALIZATION)
@@ -188,6 +194,82 @@ class WorkflowService:
                 raise ValueError("Decision IDs must be unique within a run")
             run.decisions = (*run.decisions, decision)
             run.pending_decision_origin = WorkflowState.MODELING
+            transition(run, WorkflowState.WAITING_HUMAN)
+
+        self.storage.save_run(run)
+        return run
+
+    def _advance_canonicalization(self, run: WorkflowRun) -> WorkflowRun:
+        if any(
+            decision.classification == "MATERIAL" and decision.status == "PENDING"
+            for decision in run.decisions
+        ):
+            raise ValueError(
+                "CANONICALIZATION cannot advance with an existing pending Decision"
+            )
+        if run.modeling_result is None or run.convergence_result is None:
+            raise ValueError(
+                "CANONICALIZATION requires a complete converged ModelingResult"
+            )
+        if run.convergence_result.status != "PASS":
+            raise ValueError("CANONICALIZATION requires Convergence PASS")
+
+        authority = active_authority(run, self.storage.load_source(run.run_id))
+        document = compose_canonical(
+            authority,
+            run.modeling_result,
+            run.diagnostics,
+            self.ai,
+        )
+        markdown = render_markdown(document)
+        validation_findings = validate_contract(document)
+
+        if validation_findings:
+            run.canonical_candidate = document
+            run.audit_result = None
+            run.diagnostics = validation_findings
+            transition(run, WorkflowState.CANONICALIZATION)
+            self.storage.save_run(run)
+            return run
+
+        audit = audit_canonical(
+            authority,
+            run.modeling_result,
+            document,
+            markdown,
+            self.ai,
+        )
+
+        if audit.status == "PASS":
+            run.canonical_candidate = document
+            run.audit_result = audit
+            run.diagnostics = ()
+            self.storage.write_canonical(run.run_id, markdown)
+            transition(run, WorkflowState.DONE)
+        elif audit.remediation == "EDITORIAL":
+            run.canonical_candidate = document
+            run.audit_result = audit
+            run.diagnostics = audit.findings
+            transition(run, WorkflowState.CANONICALIZATION)
+        elif audit.remediation == "REMODEL":
+            run.canonical_candidate = None
+            run.audit_result = None
+            run.diagnostics = audit.findings
+            transition(run, WorkflowState.MODELING)
+        else:
+            decision = audit.decision
+            if decision is None:  # guarded by AuditResult validation
+                raise ValueError("HUMAN_DECISION remediation has no Decision")
+            if any(
+                existing.decision_id == decision.decision_id
+                for existing in run.decisions
+            ):
+                raise ValueError("Decision IDs must be unique within a run")
+            run.canonical_candidate = document
+            run.audit_result = audit
+            run.diagnostics = audit.findings
+            run.decisions = (*run.decisions, decision)
+            run.pending_decision_origin = WorkflowState.CANONICALIZATION
             transition(run, WorkflowState.WAITING_HUMAN)
 
         self.storage.save_run(run)

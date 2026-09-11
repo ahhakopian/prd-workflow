@@ -290,23 +290,184 @@ class ConvergenceResult(BaseModel):
         return self
 
 
+class _CanonicalSection(BaseModel):
+    """Common explicit content carried by every Canonical section."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    summary: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_legacy_section_text(cls, value: object) -> object:
+        """Keep persisted Slice 1 values readable as one typed representation."""
+
+        if isinstance(value, str):
+            return {"summary": value}
+        return value
+
+
+class CanonicalProductDefinition(_CanonicalSection):
+    """Product intent and its explicitly identified goals and non-goals."""
+
+    problem: str = ""
+    target_actor_ids: tuple[str, ...] = ()
+    intended_outcome: str = ""
+    goals: tuple[str, ...] = ()
+    non_goals: tuple[str, ...] = ()
+
+
+class CanonicalScopeEntry(BaseModel):
+    """The target-release classification for one material capability."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    capability_id: str
+    status: Literal["IN", "PARTIAL", "OUT", "FUTURE"]
+    included: tuple[str, ...] = ()
+    excluded: tuple[str, ...] = ()
+
+
+class CanonicalScope(_CanonicalSection):
+    """Target release and the explicit scope of every material capability."""
+
+    target_release: str = ""
+    capabilities: tuple[CanonicalScopeEntry, ...] = ()
+
+
+class CanonicalActor(BaseModel):
+    """One human, system, or external actor referenced by the document."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    actor_id: str
+    name: str
+    kind: Literal["HUMAN", "SYSTEM", "EXTERNAL"]
+    purpose: str
+    may_do: tuple[str, ...] = ()
+    must_do: tuple[str, ...] = ()
+    must_not_do: tuple[str, ...] = ()
+    permission_boundaries: tuple[str, ...] = ()
+
+
+class CanonicalActorsAndRoles(_CanonicalSection):
+    """All material actors and their role or permission semantics."""
+
+    actors: tuple[CanonicalActor, ...] = ()
+
+
+class CanonicalDomainModel(_CanonicalSection):
+    """Shared business meaning without implementation structure."""
+
+    concepts: tuple[str, ...] = ()
+    relationships: tuple[str, ...] = ()
+    invariants: tuple[str, ...] = ()
+    terminology: tuple[str, ...] = ()
+
+
+class CanonicalCapability(BaseModel):
+    """One material user or business capability."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    capability_id: str
+    name: str
+    purpose: str
+    actor_ids: tuple[str, ...] = ()
+    required_behavior: tuple[str, ...] = ()
+    business_rules: tuple[str, ...] = ()
+    dependency_capability_ids: tuple[str, ...] = ()
+    failure_conditions: tuple[str, ...] = ()
+
+
+class CanonicalFunctionalCapabilities(_CanonicalSection):
+    """Material capabilities whose release status is defined by CanonicalScope."""
+
+    capabilities: tuple[CanonicalCapability, ...] = ()
+
+
+class CanonicalSystemBoundaries(_CanonicalSection):
+    """Inside/outside responsibilities, dependencies, and ownership."""
+
+    inside_system: tuple[str, ...] = ()
+    outside_system: tuple[str, ...] = ()
+    external_dependencies: tuple[str, ...] = ()
+    data_ownership: tuple[str, ...] = ()
+    decision_ownership: tuple[str, ...] = ()
+    responsibility_ownership: tuple[str, ...] = ()
+    systems_of_record: tuple[str, ...] = ()
+
+
+class CanonicalArchitecture(_CanonicalSection):
+    """Only high-level architectural constraints downstream must preserve."""
+
+    responsibility_areas: tuple[str, ...] = ()
+    non_responsibilities: tuple[str, ...] = ()
+    interactions: tuple[str, ...] = ()
+    constraints: tuple[str, ...] = ()
+    invariants: tuple[str, ...] = ()
+    dependency_directions: tuple[str, ...] = ()
+
+
+class CanonicalCrossCuttingRequirements(_CanonicalSection):
+    """Material cross-capability and non-functional requirements."""
+
+    requirements: tuple[str, ...] = ()
+
+
+class CanonicalResponsibilityBoundary(BaseModel):
+    """A boundary downstream Feature decomposition must preserve."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    boundary_id: str
+    name: str
+    owns: tuple[str, ...]
+    does_not_own: tuple[str, ...] = ()
+    may_depend_on_boundary_ids: tuple[str, ...] = ()
+    must_not_depend_on_boundary_ids: tuple[str, ...] = ()
+    supported_capability_ids: tuple[str, ...] = ()
+
+
+class CanonicalResponsibilityBoundaries(_CanonicalSection):
+    """Normative responsibility boundaries for downstream decomposition."""
+
+    boundaries: tuple[CanonicalResponsibilityBoundary, ...] = ()
+
+
+class CanonicalDeferredDecision(BaseModel):
+    """One undecided matter proven safe for downstream resolution."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    decision_id: str
+    question: str
+    reason_safe_to_defer: str
+    downstream_constraints: tuple[str, ...]
+
+
+class CanonicalDeferredDecisions(_CanonicalSection):
+    """Safe deferrals and the upstream constraints that must remain fixed."""
+
+    decisions: tuple[CanonicalDeferredDecision, ...] = ()
+    fixed_upstream_constraints: tuple[str, ...] = ()
+
+
 class CanonicalRDP(BaseModel):
     """The ten required sections of a Canonical RDP candidate."""
 
     model_config = ConfigDict(extra="forbid")
 
-    product_definition: str
-    scope_and_release_boundary: str
-    actors_and_roles: str
-    domain_model: str
-    functional_capabilities: str
-    system_boundaries_and_ownership: str
-    high_level_architecture: str
-    cross_cutting_and_non_functional_requirements: str
-    required_responsibility_boundaries: str
-    deferred_decisions_and_handoff_constraints: str
-
-    _validate_sections = field_validator("*")(_non_blank)
+    product_definition: CanonicalProductDefinition
+    scope_and_release_boundary: CanonicalScope
+    actors_and_roles: CanonicalActorsAndRoles
+    domain_model: CanonicalDomainModel
+    functional_capabilities: CanonicalFunctionalCapabilities
+    system_boundaries_and_ownership: CanonicalSystemBoundaries
+    high_level_architecture: CanonicalArchitecture
+    cross_cutting_and_non_functional_requirements: CanonicalCrossCuttingRequirements
+    required_responsibility_boundaries: CanonicalResponsibilityBoundaries
+    deferred_decisions_and_handoff_constraints: CanonicalDeferredDecisions
 
 
 class AuditResult(BaseModel):
@@ -317,12 +478,42 @@ class AuditResult(BaseModel):
     status: Literal["PASS", "FAIL"]
     findings: tuple[str, ...] = ()
     remediation: Literal["HUMAN_DECISION", "REMODEL", "EDITORIAL"] | None = None
+    decision: Decision | None = None
+
+    @field_validator("findings")
+    @classmethod
+    def _validate_findings(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        for value in values:
+            _non_blank(value)
+        return values
 
     @model_validator(mode="after")
     def _validate_result(self) -> Self:
-        if self.status == "PASS" and self.remediation is not None:
-            raise ValueError("a PASS AuditResult cannot require remediation")
-        if self.status == "FAIL" and self.remediation is None:
+        if self.status == "PASS":
+            if self.remediation is not None:
+                raise ValueError("a PASS AuditResult cannot require remediation")
+            if self.decision is not None:
+                raise ValueError("a PASS AuditResult cannot contain a Decision")
+        elif not self.findings:
+            raise ValueError("a FAIL AuditResult requires findings")
+        elif self.remediation in {"EDITORIAL", "REMODEL"}:
+            if self.decision is not None:
+                raise ValueError(
+                    f"a {self.remediation} AuditResult cannot contain a Decision"
+                )
+        elif self.remediation == "HUMAN_DECISION":
+            decision = self.decision
+            if (
+                decision is None
+                or decision.classification != "MATERIAL"
+                or decision.status != "PENDING"
+                or decision.origin_state is not WorkflowState.CANONICALIZATION
+            ):
+                raise ValueError(
+                    "HUMAN_DECISION requires exactly one pending "
+                    "CANONICALIZATION-origin MATERIAL Decision"
+                )
+        else:
             raise ValueError("a FAIL AuditResult requires remediation")
         return self
 

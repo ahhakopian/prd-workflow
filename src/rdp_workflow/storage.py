@@ -78,6 +78,35 @@ class FileStorage:
             if temporary_path is not None and temporary_path.exists():
                 temporary_path.unlink()
 
+    def write_canonical(self, run_id: str, markdown: str) -> Path:
+        """Atomically replace the one final Canonical Markdown candidate."""
+
+        run_dir = self._run_dir(run_id)
+        if not run_dir.is_dir():
+            raise FileNotFoundError(f"Run directory does not exist: {run_dir}")
+
+        destination = run_dir / "canonical-rdp.md"
+        temporary_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                newline="",
+                dir=run_dir,
+                prefix=".canonical-",
+                suffix=".tmp",
+                delete=False,
+            ) as temporary:
+                temporary_path = Path(temporary.name)
+                temporary.write(markdown)
+                temporary.flush()
+                os.fsync(temporary.fileno())
+            os.replace(temporary_path, destination)
+        finally:
+            if temporary_path is not None and temporary_path.exists():
+                temporary_path.unlink()
+        return destination
+
     def run_directory(self, run_id: str) -> Path:
         """Return the concrete directory for a run without reading its files."""
 
