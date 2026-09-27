@@ -7,17 +7,17 @@ from typing import Any
 
 import pytest
 
-import rdp_workflow.canonical as canonical_module
+import prd_workflow.canonical as canonical_module
 
-from rdp_workflow.ai import load_prompt
-from rdp_workflow.ai_contracts import (
+from prd_workflow.ai import load_prompt
+from prd_workflow.ai_contracts import (
     AuditEditorialOutput,
     AuditHumanDecisionOutput,
     AuditPassOutput,
     AuditRemodelOutput,
     MaterialDecisionDraft,
 )
-from rdp_workflow.canonical import (
+from prd_workflow.canonical import (
     audit_canonical,
     compose_canonical,
     final_canonical_path,
@@ -25,7 +25,7 @@ from rdp_workflow.canonical import (
     render_markdown,
     validate_contract,
 )
-from rdp_workflow.models import (
+from prd_workflow.models import (
     ArchitectureView,
     AuditResult,
     CanonicalActor,
@@ -38,7 +38,7 @@ from rdp_workflow.models import (
     CanonicalDomainModel,
     CanonicalFunctionalCapabilities,
     CanonicalProductDefinition,
-    CanonicalRDP,
+    CanonicalPRD,
     CanonicalResponsibilityBoundaries,
     CanonicalResponsibilityBoundary,
     CanonicalScope,
@@ -103,8 +103,8 @@ def modeling_result() -> ModelingResult:
     )
 
 
-def canonical_document(label: str = "candidate") -> CanonicalRDP:
-    return CanonicalRDP(
+def canonical_document(label: str = "candidate") -> CanonicalPRD:
+    return CanonicalPRD(
         product_definition=CanonicalProductDefinition(
             summary=f"Expense product ({label}).",
             problem="Employees need a controlled reimbursement workflow.",
@@ -319,8 +319,8 @@ def test_renderer_rejects_invalid_or_unreplaced_template_placeholders(
 
 
 def test_contract_validation_rejects_missing_sections_and_required_content() -> None:
-    missing = CanonicalRDP.model_construct()
-    empty_legacy = CanonicalRDP(
+    missing = CanonicalPRD.model_construct()
+    empty_legacy = CanonicalPRD(
         product_definition="Product",
         scope_and_release_boundary="Scope",
         actors_and_roles="Actors",
@@ -408,7 +408,7 @@ def test_contract_validation_enforces_identifiers_deferrals_and_boundaries() -> 
     assert any("undefined capability 'unknown-capability'" in finding for finding in findings)
     assert any("reason it is safe to defer must not be empty" in finding for finding in findings)
     assert any("downstream constraints must not be empty" in finding for finding in findings)
-    assert "material_open_questions" not in CanonicalRDP.model_fields
+    assert "material_open_questions" not in CanonicalPRD.model_fields
 
 
 def test_audit_receives_only_current_runtime_inputs() -> None:
@@ -425,12 +425,12 @@ def test_audit_receives_only_current_runtime_inputs() -> None:
     payload = ai.calls[0]["payload"]
     assert payload["active_authority"] is authority
     assert payload["converged_modeling_result"] == models.model_dump(mode="json")
-    assert payload["structured_canonical_rdp"] == document.model_dump(mode="json")
+    assert payload["structured_canonical_prd"] == document.model_dump(mode="json")
     assert payload["exact_rendered_markdown_candidate"] == exact_markdown
     assert set(payload) == {
         "active_authority",
         "converged_modeling_result",
-        "structured_canonical_rdp",
+        "structured_canonical_prd",
         "exact_rendered_markdown_candidate",
     }
     assert "contract" not in json.dumps(payload)
@@ -581,7 +581,7 @@ def test_audit_result_strictly_ties_each_outcome_to_its_allowed_payload() -> Non
             AuditResult.model_validate(values)
 
 
-def _terminal_run(document: CanonicalRDP | None = None) -> WorkflowRun:
+def _terminal_run(document: CanonicalPRD | None = None) -> WorkflowRun:
     return WorkflowRun(
         run_id="run-1",
         state=WorkflowState.DONE,
@@ -597,7 +597,7 @@ def test_final_canonical_path_exposes_only_valid_done_canonical_file(
     run_dir = tmp_path / "run-1"
     run_dir.mkdir()
     run = _terminal_run()
-    expected = run_dir / "canonical-rdp.md"
+    expected = run_dir / "canonical-prd.md"
     expected.write_text(render_markdown(run.canonical_candidate), encoding="utf-8")
 
     with pytest.raises(ValueError, match="only for a DONE run"):
@@ -616,7 +616,7 @@ def test_final_canonical_path_rejects_missing_or_mutated_artifact(
     run_dir = tmp_path / "run-1"
     run_dir.mkdir()
     run = _terminal_run()
-    path = run_dir / "canonical-rdp.md"
+    path = run_dir / "canonical-prd.md"
     if artifact_state == "mutated":
         path.write_text(
             render_markdown(run.canonical_candidate) + "\nChanged.\n",
@@ -634,7 +634,7 @@ def test_final_canonical_path_rejects_missing_terminal_gate(
     run_dir = tmp_path / "run-1"
     run_dir.mkdir()
     run = _terminal_run()
-    (run_dir / "canonical-rdp.md").write_text(
+    (run_dir / "canonical-prd.md").write_text(
         render_markdown(run.canonical_candidate), encoding="utf-8"
     )
     if missing_gate == "convergence":
@@ -654,7 +654,7 @@ def test_final_canonical_path_rejects_nonpassing_terminal_results(
     run_dir = tmp_path / "run-1"
     run_dir.mkdir()
     run = _terminal_run()
-    (run_dir / "canonical-rdp.md").write_text(
+    (run_dir / "canonical-prd.md").write_text(
         render_markdown(run.canonical_candidate), encoding="utf-8"
     )
     run.convergence_result = ConvergenceResult(
@@ -680,7 +680,7 @@ def test_final_canonical_path_rejects_contract_invalid_candidate(
     invalid = canonical_document().model_copy(deep=True)
     invalid.product_definition.goals = ()
     run = _terminal_run(invalid)
-    (run_dir / "canonical-rdp.md").write_text(
+    (run_dir / "canonical-prd.md").write_text(
         render_markdown(invalid), encoding="utf-8"
     )
 

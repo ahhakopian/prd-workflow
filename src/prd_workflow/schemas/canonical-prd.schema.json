@@ -650,7 +650,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "The ten required sections of a Canonical RDP candidate.",
+  "description": "The ten required sections of a Canonical PRD candidate.",
   "properties": {
     "actors_and_roles": {
       "$ref": "#/$defs/CanonicalActorsAndRoles"
@@ -695,6 +695,6 @@
     "required_responsibility_boundaries",
     "deferred_decisions_and_handoff_constraints"
   ],
-  "title": "CanonicalRDP",
+  "title": "CanonicalPRD",
   "type": "object"
 }

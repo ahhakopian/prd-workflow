@@ -6,7 +6,7 @@ from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from rdp_workflow.models import (
+from prd_workflow.models import (
     ArchitectureView,
     CapabilityValue,
     Decision,

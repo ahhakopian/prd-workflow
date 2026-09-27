@@ -5,8 +5,8 @@ from typing import Any
 
 import pytest
 
-from rdp_workflow.ai_contracts import MaterialDecisionDraft
-from rdp_workflow.models import (
+from prd_workflow.ai_contracts import MaterialDecisionDraft
+from prd_workflow.models import (
     CustomAnswer,
     Decision,
     DecisionOption,
@@ -15,8 +15,8 @@ from rdp_workflow.models import (
     OptionWithClarification,
     WorkflowState,
 )
-from rdp_workflow.storage import FileStorage
-from rdp_workflow.workflow import WorkflowService
+from prd_workflow.storage import FileStorage
+from prd_workflow.workflow import WorkflowService
 
 
 class ScriptedAI:
@@ -72,7 +72,7 @@ def intake_decision_draft() -> MaterialDecisionDraft:
 
 
 def service_at(tmp_path: Path, ai: ScriptedAI) -> WorkflowService:
-    return WorkflowService(FileStorage(tmp_path / ".rdp"), ai)
+    return WorkflowService(FileStorage(tmp_path / ".prd"), ai)
 
 
 def source_at(tmp_path: Path) -> Path:
@@ -103,7 +103,7 @@ def test_workflow_intake_with_material_unknown_pauses_with_one_persisted_decisio
     started = service.start(source_at(tmp_path))
 
     advanced = service.advance(started.run_id)
-    restarted = WorkflowService(FileStorage(tmp_path / ".rdp"), ai).status(
+    restarted = WorkflowService(FileStorage(tmp_path / ".prd"), ai).status(
         started.run_id
     )
 
@@ -157,7 +157,7 @@ def test_workflow_resume_rechecks_intake_with_answer_in_active_authority(
         OptionWithClarification(option_id="B", clarification=clarification),
     )
 
-    resumed = WorkflowService(FileStorage(tmp_path / ".rdp"), ai).advance(
+    resumed = WorkflowService(FileStorage(tmp_path / ".prd"), ai).advance(
         started.run_id
     )
 
@@ -194,7 +194,7 @@ def test_workflow_ai_failure_does_not_change_persisted_state(
         def invoke(self, **_: object) -> Any:
             raise RuntimeError("invalid structured output")
 
-    storage = FileStorage(tmp_path / ".rdp")
+    storage = FileStorage(tmp_path / ".prd")
     service = WorkflowService(storage, FailingAI())
     started = service.start(source_at(tmp_path))
 

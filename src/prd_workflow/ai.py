@@ -12,7 +12,7 @@ from typing import Any, Protocol, TypeVar
 
 from pydantic import TypeAdapter, ValidationError
 
-from rdp_workflow.ai_contracts import (
+from prd_workflow.ai_contracts import (
     ArchitectureOutput,
     AuditOutput,
     CapabilitiesOutput,
@@ -20,7 +20,7 @@ from rdp_workflow.ai_contracts import (
     DomainOutput,
     MaterialDecisionDraft,
 )
-from rdp_workflow.models import CanonicalRDP
+from prd_workflow.models import CanonicalPRD
 
 
 ResultT = TypeVar("ResultT")
@@ -30,7 +30,7 @@ DOMAIN_RESULT_TYPE = DomainOutput
 CAPABILITIES_RESULT_TYPE = CapabilitiesOutput
 ARCHITECTURE_RESULT_TYPE = ArchitectureOutput
 CONVERGENCE_RESULT_TYPE = ConvergenceOutput
-CANONICAL_RESULT_TYPE = CanonicalRDP
+CANONICAL_RESULT_TYPE = CanonicalPRD
 CANONICAL_AUDIT_RESULT_TYPE = AuditOutput
 
 _PROMPT_FILES = {
@@ -49,7 +49,7 @@ _SCHEMA_FILES = {
     "derive_capabilities": "capabilities.schema.json",
     "derive_architecture": "architecture.schema.json",
     "review_convergence": "convergence.schema.json",
-    "compose_canonical": "canonical-rdp.schema.json",
+    "compose_canonical": "canonical-prd.schema.json",
     "audit_canonical": "canonical-audit.schema.json",
 }
 
@@ -104,7 +104,7 @@ class CodexAIExecutor:
 
         schema_asset = schema_resource(operation)
         with resources.as_file(schema_asset) as schema_path, tempfile.TemporaryDirectory(
-            prefix="rdp-codex-"
+            prefix="prd-codex-"
         ) as temporary:
             directory = Path(temporary)
             output_path = directory / "result.json"
@@ -204,7 +204,7 @@ def canonical_schema_json(schema: dict[str, object]) -> str:
 
 
 def _resource(directory: str, filename: str) -> Traversable:
-    return resources.files("rdp_workflow").joinpath(directory, filename)
+    return resources.files("prd_workflow").joinpath(directory, filename)
 
 
 def _mapped_name(mapping: dict[str, str], operation: str, kind: str) -> str:

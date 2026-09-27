@@ -1,4 +1,4 @@
-# Canonical RDP
+# Canonical PRD
 
 ## 1. Product Definition
 

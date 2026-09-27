@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This contract defines how the RDP Convergence Workflow obtains authoritative human decisions when a material question cannot be resolved from existing authority.
+This contract defines how the PRD Convergence Workflow obtains authoritative human decisions when a material question cannot be resolved from existing authority.
 
 The protocol ensures that:
 
@@ -56,7 +56,7 @@ Each question MUST:
 
 - address exactly one underlying material decision;
 - be understandable without requiring hidden AI reasoning;
-- describe the decision at the level relevant to the Canonical RDP;
+- describe the decision at the level relevant to the Canonical PRD;
 - avoid unnecessary implementation detail;
 - make the material consequence of the decision clear.
 
@@ -92,7 +92,7 @@ The recommendation SHOULD consider:
 
 - the source PRD;
 - current authoritative decisions;
-- the Canonical RDP Contract;
+- the Canonical PRD Contract;
 - simplicity;
 - consistency;
 - current release scope;
@@ -279,7 +279,7 @@ Each human decision SHOULD be stored with at least:
 
 The record MAY contain additional provenance required by the implementation.
 
-Decision history is internal workflow state and SHOULD NOT be copied into the Canonical RDP unless needed to understand the current authoritative requirement.
+Decision history is internal workflow state and SHOULD NOT be copied into the Canonical PRD unless needed to understand the current authoritative requirement.
 
 ---
 
@@ -297,7 +297,7 @@ A decision record MUST have one of the following states:
 
 `SUPERSEDED` means a later authoritative decision has explicitly replaced it.
 
-A `PENDING` material decision MUST block Canonical RDP completion.
+A `PENDING` material decision MUST block Canonical PRD completion.
 
 ---
 

@@ -2,11 +2,11 @@
 
 ## 1. Purpose
 
-This contract defines how the RDP Convergence Workflow classifies unresolved decisions.
+This contract defines how the PRD Convergence Workflow classifies unresolved decisions.
 
 Every unresolved decision MUST be classified as either:
 
-- `MATERIAL` — must be resolved before the Canonical RDP can be completed;
+- `MATERIAL` — must be resolved before the Canonical PRD can be completed;
 - `DEFERRED` — may be safely decided downstream.
 
 An unresolved decision MUST NOT remain unclassified.
@@ -233,7 +233,7 @@ The AI MUST NOT choose which part of the human answer takes precedence unless an
 
 ## 14. Deferred Decision Requirements
 
-Every deferred decision recorded in the Canonical RDP MUST include:
+Every deferred decision recorded in the Canonical PRD MUST include:
 
 - the undecided question;
 - why it is safe to defer;
@@ -266,7 +266,7 @@ Required action: DEFER
 
 16. Completion Rule
 
-The Canonical RDP MUST NOT be completed while any unresolved MATERIAL decision remains.
+The Canonical PRD MUST NOT be completed while any unresolved MATERIAL decision remains.
 Canonicalization is allowed only when every discovered unresolved decision is either:
 - resolved by existing authority;
 - resolved through an explicit human decision; or

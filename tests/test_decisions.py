@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from rdp_workflow.decisions import accept_answer, active_authority
-from rdp_workflow.models import (
+from prd_workflow.decisions import accept_answer, active_authority
+from prd_workflow.models import (
     CustomAnswer,
     Decision,
     DecisionOption,

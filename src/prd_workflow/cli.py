@@ -1,4 +1,4 @@
-"""Minimal operator CLI over the persisted RDP workflow."""
+"""Minimal operator CLI over the persisted PRD workflow."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from rdp_workflow.ai import CodexAIExecutor
-from rdp_workflow.canonical import final_canonical_path
-from rdp_workflow.models import (
+from prd_workflow.ai import CodexAIExecutor
+from prd_workflow.canonical import final_canonical_path
+from prd_workflow.models import (
     CustomAnswer,
     Decision,
     OptionSelection,
@@ -17,8 +17,8 @@ from rdp_workflow.models import (
     WorkflowRun,
     WorkflowState,
 )
-from rdp_workflow.storage import FileStorage
-from rdp_workflow.workflow import WorkflowService
+from prd_workflow.storage import FileStorage
+from prd_workflow.workflow import WorkflowService
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -67,7 +67,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="rdp")
+    parser = argparse.ArgumentParser(prog="prd")
     commands = parser.add_subparsers(dest="command", required=True)
 
     start = commands.add_parser("start", help="create a run from one Source PRD")
@@ -87,7 +87,7 @@ def _parser() -> argparse.ArgumentParser:
     answer_form.add_argument("--custom", metavar="TEXT")
     answer.add_argument("--clarification", metavar="TEXT")
 
-    handoff = commands.add_parser("handoff", help="expose the DONE Canonical RDP")
+    handoff = commands.add_parser("handoff", help="expose the DONE Canonical PRD")
     handoff.add_argument("run_id")
     return parser
 
@@ -95,7 +95,7 @@ def _parser() -> argparse.ArgumentParser:
 def _print_start(run: WorkflowRun) -> None:
     print(f"run_id: {run.run_id}")
     print(f"state: {run.state.value}")
-    print(f"next: rdp advance {run.run_id}")
+    print(f"next: prd advance {run.run_id}")
 
 
 def _print_advance(run: WorkflowRun) -> None:
@@ -104,7 +104,7 @@ def _print_advance(run: WorkflowRun) -> None:
     if run.state is WorkflowState.WAITING_HUMAN:
         print("outcome: Human Authority is required before the workflow can continue.")
     elif run.state is WorkflowState.DONE:
-        print("outcome: Canonical RDP is ready.")
+        print("outcome: Canonical PRD is ready.")
     elif run.state is WorkflowState.MODELING and run.convergence_result is not None:
         print("outcome: Modeling must be rebuilt from current Authority.")
     elif run.state is WorkflowState.MODELING:
@@ -200,13 +200,13 @@ def _print_next_action(run: WorkflowRun) -> None:
         WorkflowState.MODELING,
         WorkflowState.CANONICALIZATION,
     }:
-        print(f"next: rdp advance {run.run_id}")
+        print(f"next: prd advance {run.run_id}")
     elif run.state is WorkflowState.WAITING_HUMAN:
         decision = _pending_decision(run)
         if decision is not None:
-            print(f"next: rdp answer {run.run_id} {decision.decision_id} ...")
+            print(f"next: prd answer {run.run_id} {decision.decision_id} ...")
     elif run.state is WorkflowState.DONE:
-        print(f"next: rdp handoff {run.run_id}")
+        print(f"next: prd handoff {run.run_id}")
 
 
 if __name__ == "__main__":  # pragma: no cover - console entry point owns execution

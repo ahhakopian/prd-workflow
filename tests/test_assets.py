@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from rdp_workflow.ai import (
+from prd_workflow.ai import (
     canonical_schema_json,
     generated_strict_schema,
     load_committed_schema,
     load_prompt,
     schema_resource,
 )
-from rdp_workflow.canonical import load_canonical_template
+from prd_workflow.canonical import load_canonical_template
 
 
 OPERATIONS_AND_ASSETS = {
@@ -22,7 +22,7 @@ OPERATIONS_AND_ASSETS = {
     "derive_capabilities": ("capabilities.md", "capabilities.schema.json"),
     "derive_architecture": ("architecture.md", "architecture.schema.json"),
     "review_convergence": ("convergence.md", "convergence.schema.json"),
-    "compose_canonical": ("canonical-compose.md", "canonical-rdp.schema.json"),
+    "compose_canonical": ("canonical-compose.md", "canonical-prd.schema.json"),
     "audit_canonical": ("canonical-audit.md", "canonical-audit.schema.json"),
 }
 
@@ -33,7 +33,7 @@ def test_prompt_assets_are_package_readable_and_preserve_operation_contracts(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     prompts = {operation: load_prompt(operation) for operation in OPERATIONS_AND_ASSETS}
-    package = resources.files("rdp_workflow")
+    package = resources.files("prd_workflow")
 
     for operation, prompt in prompts.items():
         prompt_resource = package.joinpath(
@@ -174,12 +174,12 @@ def test_runtime_assets_remain_readable_without_repository_docs_or_working_direc
     assert all(load_prompt(operation) for operation in OPERATIONS_AND_ASSETS)
     assert all(load_committed_schema(operation) for operation in OPERATIONS_AND_ASSETS)
     template = load_canonical_template()
-    template_resource = resources.files("rdp_workflow").joinpath(
-        "templates", "canonical-rdp.md"
+    template_resource = resources.files("prd_workflow").joinpath(
+        "templates", "canonical-prd.md"
     )
     assert template_resource.is_file()
     assert template_resource.read_text(encoding="utf-8") == template
-    assert template.startswith("# Canonical RDP\n")
+    assert template.startswith("# Canonical PRD\n")
     placeholders = re.findall(r"\{\{[^{}\n]+\}\}", template)
     assert len(placeholders) == 40
     assert len(placeholders) == len(set(placeholders))

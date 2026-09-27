@@ -1,10 +1,10 @@
-# RDP Convergence Workflow — Iteration 1 Frozen Architecture
+# PRD Convergence Workflow — Iteration 1 Frozen Architecture
 
 Status: frozen for Iteration 1 implementation. Design only; no production implementation is included.
 
 ## 1. Goal
 
-Prove that one Source PRD can traverse the complete contracted workflow, pause for and preserve Human Authority, rebuild and converge the product/system understanding, and expose exactly one audited Canonical RDP for SpecKit.
+Prove that one Source PRD can traverse the complete contracted workflow, pause for and preserve Human Authority, rebuild and converge the product/system understanding, and expose exactly one audited Canonical PRD for SpecKit.
 
 ## 2. Architecture rules
 
@@ -16,7 +16,7 @@ Prove that one Source PRD can traverse the complete contracted workflow, pause f
 6. Domain, Capabilities, Architecture, Convergence, Canonical composition, validation, audit, and repair are operations inside the normative coarse states.
 7. Only one Material Decision may be pending.
 8. After accepted Human Authority originating after intake, the complete derived model set is rebuilt. There is no selective invalidation.
-9. SpecKit receives only the Canonical RDP from a `DONE` run.
+9. SpecKit receives only the Canonical PRD from a `DONE` run.
 
 ## 3. Non-goals
 
@@ -40,9 +40,9 @@ Iteration 1 excludes:
 ```text
 Source PRD
     ->
-RDP Convergence Workflow
+PRD Convergence Workflow
     ->
-Canonical RDP
+Canonical PRD
     ->
 SpecKit
 ```
@@ -114,11 +114,11 @@ An editorial failure leaves the FSM in `CANONICALIZATION`; the next phase execut
 4. Modeling derives the three required views only from current Active Authority.
 5. A separate Convergence Review checks the complete model set against Active Authority and the normative convergence conditions.
 6. Only Convergence `PASS` permits `MODELING -> CANONICALIZATION`.
-7. A constrained AI Canonical Composer consolidates the converged understanding into structured `CanonicalRDP`. Composition establishes no Authority.
+7. A constrained AI Canonical Composer consolidates the converged understanding into structured `CanonicalPRD`. Composition establishes no Authority.
 8. A deterministic renderer produces Markdown and deterministic validation checks mechanically enforceable contract rules.
 9. A separate fresh AI invocation performs the independent Canonical Audit.
 10. Only validation `PASS` plus audit `PASS` permits `CANONICALIZATION -> DONE`.
-11. The exact audited Markdown is written as `canonical-rdp.md` before `DONE` is committed.
+11. The exact audited Markdown is written as `canonical-prd.md` before `DONE` is committed.
 12. The Canonical module exposes that one path only for `DONE`.
 
 ### Human Decision path
@@ -168,7 +168,7 @@ Iteration 1 has **9 core domain types**:
 5. `HumanAnswer` — discriminated union of the three valid answer forms.
 6. `ModelingResult` — shallow Domain, Capability, Architecture, product context, and deferred decisions.
 7. `ConvergenceResult` — `PASS | FAIL`, findings, and optional `HUMAN_DECISION | REMODEL` remediation.
-8. `CanonicalRDP` — structured ten-section Canonical document.
+8. `CanonicalPRD` — structured ten-section Canonical document.
 9. `AuditResult` — `PASS | FAIL`, findings, and optional `HUMAN_DECISION | REMODEL | EDITORIAL` remediation.
 
 `HumanAnswer` is:
@@ -181,7 +181,7 @@ CustomAnswer(text)
 
 Small literals/enums and nested section values are implementation details, not independent core concepts. There is no core `DecisionPrompt`, `MaterialDecision`, `DeferredDecision`, `AuthorityRef`, `ActiveAuthority`, `IntakeResult`, `ContractValidationResult`, or `BlockingReason`.
 
-`ModelingResult` is not a duplicate Canonical RDP. It contains shallow validated fields for product context; Domain concepts/relationships/invariants; Functional Capabilities/actors/behavior/rules/scope/dependencies/failures; Architecture/boundaries/ownership/interactions/constraints/cross-cutting requirements; and safely Deferred Decisions. It does not reproduce final ten-section prose or schema and carries no per-element provenance.
+`ModelingResult` is not a duplicate Canonical PRD. It contains shallow validated fields for product context; Domain concepts/relationships/invariants; Functional Capabilities/actors/behavior/rules/scope/dependencies/failures; Architecture/boundaries/ownership/interactions/constraints/cross-cutting requirements; and safely Deferred Decisions. It does not reproduce final ten-section prose or schema and carries no per-element provenance.
 
 ## 9. AI boundary
 
@@ -209,7 +209,7 @@ Iteration 1 uses **constrained AI structured composition**:
 ```text
 Active Authority + Convergence-PASS ModelingResult
     -> constrained AI Canonical Composer
-    -> structured CanonicalRDP
+    -> structured CanonicalPRD
     -> deterministic Markdown renderer
     -> deterministic Canonical Contract validation
     -> fresh independent Canonical Audit
@@ -241,15 +241,15 @@ Iteration 1 has **8 functional modules**, plus a minimal `__init__.py` (`9` sour
 ## 12. Persistence
 
 ```text
-.rdp/runs/<run-id>/
+.prd/runs/<run-id>/
 ├── source-prd.md
 ├── run.json
-└── canonical-rdp.md
+└── canonical-prd.md
 ```
 
 `run.json` persists the explicit FSM state, pending-decision origin, Decision history and exact answers, current Modeling/Convergence results, current Canonical candidate/Audit result, and concrete diagnostics.
 
-`canonical-rdp.md` is written only from the candidate that passed validation and audit, before atomically committing `DONE`. If a crash leaves that file while state remains `CANONICALIZATION`, it is ignored and replaced during the next canonicalization execution. File presence never advances the FSM.
+`canonical-prd.md` is written only from the candidate that passed validation and audit, before atomically committing `DONE`. If a crash leaves that file while state remains `CANONICALIZATION`, it is ignored and replaced during the next canonicalization execution. File presence never advances the FSM.
 
 `run.json` uses same-directory temporary write plus atomic replacement. `storage.py` is concrete; there are no repositories, migrations, event logs, artifact stores, transactions, or database abstractions.
 
@@ -272,10 +272,10 @@ def analyze_intake(authority: dict[str, object], ai: AIExecutor) -> Decision | N
 def derive_models(authority: dict[str, object], prior_findings: tuple[str, ...], ai: AIExecutor) -> ModelingResult: ...
 def review_convergence(authority: dict[str, object], models: ModelingResult, ai: AIExecutor) -> ConvergenceResult: ...
 
-def compose_canonical(authority: dict[str, object], models: ModelingResult, editorial_findings: tuple[str, ...], ai: AIExecutor) -> CanonicalRDP: ...
-def render_markdown(document: CanonicalRDP) -> str: ...
-def validate_contract(document: CanonicalRDP) -> tuple[str, ...]: ...
-def audit_canonical(authority: dict[str, object], models: ModelingResult, document: CanonicalRDP, ai: AIExecutor) -> AuditResult: ...
+def compose_canonical(authority: dict[str, object], models: ModelingResult, editorial_findings: tuple[str, ...], ai: AIExecutor) -> CanonicalPRD: ...
+def render_markdown(document: CanonicalPRD) -> str: ...
+def validate_contract(document: CanonicalPRD) -> tuple[str, ...]: ...
+def audit_canonical(authority: dict[str, object], models: ModelingResult, document: CanonicalPRD, ai: AIExecutor) -> AuditResult: ...
 def final_canonical_path(run: WorkflowRun, run_dir: Path) -> Path: ...
 ```
 
@@ -292,9 +292,9 @@ An expense-reimbursement PRD defines all required areas except whether an employ
 5. Structural validation stores B and the exact clarification as equal Authority; the recommendation remains advisory.
 6. `WAITING_HUMAN -> MODELING` rebuilds the complete model set.
 7. Convergence `PASS` permits `MODELING -> CANONICALIZATION`.
-8. The composer produces structured `CanonicalRDP`; rendering and validation pass; the fresh Audit passes.
+8. The composer produces structured `CanonicalPRD`; rendering and validation pass; the fresh Audit passes.
 9. The exact Markdown is written and `CANONICALIZATION -> DONE` occurs.
-10. `handoff` returns exactly `canonical-rdp.md`, exposing no internal artifact.
+10. `handoff` returns exactly `canonical-prd.md`, exposing no internal artifact.
 
 ## 15. Test strategy
 
@@ -351,7 +351,7 @@ Acceptance: `ModelingResult` is not a duplicate Canonical schema; composer canno
 
 Add `start`, `advance`, `answer`, `status`, and `handoff` plus the filesystem-backed scenario.
 
-Acceptance: Source PRD -> pause -> decision -> resume -> convergence -> Canonical RDP -> audit -> `DONE` passes; restart retains authority; handoff contains one artifact; all invariant tests pass without a live AI; no Iteration 2 mechanism appears.
+Acceptance: Source PRD -> pause -> decision -> resume -> convergence -> Canonical PRD -> audit -> `DONE` passes; restart retains authority; handoff contains one artifact; all invariant tests pass without a live AI; no Iteration 2 mechanism appears.
 
 ## 17. Removed complexity and freeze
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import TypeAdapter
 
-from rdp_workflow.ai import (
+from prd_workflow.ai import (
     ARCHITECTURE_RESULT_TYPE,
     CAPABILITIES_RESULT_TYPE,
     CONVERGENCE_RESULT_TYPE,
@@ -12,7 +12,7 @@ from rdp_workflow.ai import (
     INTAKE_RESULT_TYPE,
     AIExecutor,
 )
-from rdp_workflow.ai_contracts import (
+from prd_workflow.ai_contracts import (
     ArchitectureOutput,
     CapabilitiesOutput,
     ConvergenceHumanDecisionOutput,
@@ -22,7 +22,7 @@ from rdp_workflow.ai_contracts import (
     deferred_decision_from_draft,
     material_decision_from_draft,
 )
-from rdp_workflow.models import (
+from prd_workflow.models import (
     ArchitectureView,
     CapabilityValue,
     ConvergenceResult,

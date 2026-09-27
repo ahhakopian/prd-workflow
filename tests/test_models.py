@@ -3,10 +3,10 @@ from __future__ import annotations
 import pytest
 from pydantic import TypeAdapter
 
-from rdp_workflow.models import (
+from prd_workflow.models import (
     ArchitectureView,
     AuditResult,
-    CanonicalRDP,
+    CanonicalPRD,
     CapabilityValue,
     ConvergenceResult,
     CustomAnswer,
@@ -77,8 +77,8 @@ def modeling_result() -> ModelingResult:
     )
 
 
-def canonical_rdp() -> CanonicalRDP:
-    return CanonicalRDP(
+def canonical_prd() -> CanonicalPRD:
+    return CanonicalPRD(
         product_definition="Product definition",
         scope_and_release_boundary="Scope and release boundary",
         actors_and_roles="Actors and roles",
@@ -297,7 +297,7 @@ def test_future_results_persist_without_controlling_lifecycle() -> None:
         state=WorkflowState.INTAKE,
         modeling_result=modeling_result(),
         convergence_result=ConvergenceResult(status="PASS"),
-        canonical_candidate=canonical_rdp(),
+        canonical_candidate=canonical_prd(),
         audit_result=AuditResult(status="PASS"),
     )
 

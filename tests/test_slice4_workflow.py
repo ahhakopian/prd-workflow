@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from rdp_workflow.ai_contracts import (
+from prd_workflow.ai_contracts import (
     ArchitectureOutput,
     AuditEditorialOutput,
     AuditHumanDecisionOutput,
@@ -16,8 +16,8 @@ from rdp_workflow.ai_contracts import (
     DomainOutput,
     MaterialDecisionDraft,
 )
-from rdp_workflow.canonical import final_canonical_path, render_markdown
-from rdp_workflow.models import (
+from prd_workflow.canonical import final_canonical_path, render_markdown
+from prd_workflow.models import (
     ArchitectureView,
     AuditResult,
     CapabilityValue,
@@ -29,8 +29,8 @@ from rdp_workflow.models import (
     ProductContext,
     WorkflowState,
 )
-from rdp_workflow.storage import FileStorage
-from rdp_workflow.workflow import WorkflowService
+from prd_workflow.storage import FileStorage
+from prd_workflow.workflow import WorkflowService
 from test_canonical import canonical_document, modeling_result
 
 
@@ -70,7 +70,7 @@ def service_in_canonicalization(
     *,
     convergence: ConvergenceResult | None = None,
 ) -> tuple[WorkflowService, str]:
-    service = WorkflowService(FileStorage(tmp_path / ".rdp"), ai)
+    service = WorkflowService(FileStorage(tmp_path / ".prd"), ai)
     run = service.start(source_at(tmp_path))
     run.state = WorkflowState.CANONICALIZATION
     run.modeling_result = modeling_result()
@@ -181,7 +181,7 @@ def test_validation_failure_stays_in_canonicalization_and_is_reprocessed(
     assert failed.canonical_candidate == invalid
     assert failed.audit_result is None
     assert [call["operation"] for call in ai.calls] == ["compose_canonical"]
-    assert not (service.storage.run_directory(run_id) / "canonical-rdp.md").exists()
+    assert not (service.storage.run_directory(run_id) / "canonical-prd.md").exists()
 
     completed = service.advance(run_id)
 
@@ -317,7 +317,7 @@ def test_validation_pass_without_audit_pass_never_reaches_done(tmp_path: Path) -
     assert restored.state is WorkflowState.CANONICALIZATION
     assert restored.canonical_candidate is None
     assert restored.audit_result is None
-    assert not (service.storage.run_directory(run_id) / "canonical-rdp.md").exists()
+    assert not (service.storage.run_directory(run_id) / "canonical-prd.md").exists()
     assert [call["operation"] for call in ai.calls] == [
         "compose_canonical",
         "audit_canonical",
@@ -337,7 +337,7 @@ def test_composer_provider_failure_preserves_canonicalization_for_explicit_retry
     assert restored.state is WorkflowState.CANONICALIZATION
     assert restored.canonical_candidate is None
     assert restored.audit_result is None
-    assert not (service.storage.run_directory(run_id) / "canonical-rdp.md").exists()
+    assert not (service.storage.run_directory(run_id) / "canonical-prd.md").exists()
     assert [call["operation"] for call in ai.calls] == ["compose_canonical"]
 
 
@@ -355,7 +355,7 @@ def test_audit_pass_cannot_override_current_validation_failure(tmp_path: Path) -
     assert advanced.state is WorkflowState.CANONICALIZATION
     assert advanced.audit_result is None
     assert [call["operation"] for call in ai.calls] == ["compose_canonical"]
-    assert not (service.storage.run_directory(run_id) / "canonical-rdp.md").exists()
+    assert not (service.storage.run_directory(run_id) / "canonical-prd.md").exists()
 
 
 def test_both_validation_and_audit_pass_write_exact_markdown_before_done(
@@ -367,13 +367,13 @@ def test_both_validation_and_audit_pass_write_exact_markdown_before_done(
         def save_run(self, run: Any) -> None:
             if run.state is WorkflowState.DONE:
                 self.saw_final_before_done_save = (
-                    self.run_directory(run.run_id) / "canonical-rdp.md"
+                    self.run_directory(run.run_id) / "canonical-prd.md"
                 ).is_file()
             super().save_run(run)
 
     candidate = canonical_document()
     ai = ScriptedAI(candidate, AuditPassOutput(outcome="PASS"))
-    storage = OrderingStorage(tmp_path / ".rdp")
+    storage = OrderingStorage(tmp_path / ".prd")
     service = WorkflowService(storage, ai)
     run = service.start(source_at(tmp_path))
     run.state = WorkflowState.CANONICALIZATION
@@ -386,7 +386,7 @@ def test_both_validation_and_audit_pass_write_exact_markdown_before_done(
 
     assert completed.state is WorkflowState.DONE
     assert storage.saw_final_before_done_save
-    assert final_path.name == "canonical-rdp.md"
+    assert final_path.name == "canonical-prd.md"
     assert final_path.read_text(encoding="utf-8") == render_markdown(candidate)
 
 
@@ -395,7 +395,7 @@ def test_canonical_file_presence_never_implies_done_or_enables_exposure(
 ) -> None:
     service, run_id = service_in_canonicalization(tmp_path, ScriptedAI())
     run_dir = service.storage.run_directory(run_id)
-    (run_dir / "canonical-rdp.md").write_text("# Untrusted\n", encoding="utf-8")
+    (run_dir / "canonical-prd.md").write_text("# Untrusted\n", encoding="utf-8")
 
     restored = service.status(run_id)
 
@@ -424,6 +424,6 @@ def test_slice4_adds_no_lifecycle_or_freshness_mechanism() -> None:
         "freshness",
         "is_stale",
     }
-    from rdp_workflow.models import WorkflowRun
+    from prd_workflow.models import WorkflowRun
 
     assert forbidden.isdisjoint(WorkflowRun.model_fields)

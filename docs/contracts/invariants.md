@@ -1,8 +1,8 @@
-# RDP Convergence Invariants
+# PRD Convergence Invariants
 
 ## 1. Purpose
 
-This contract defines the non-negotiable invariants of the RDP Convergence Workflow.
+This contract defines the non-negotiable invariants of the PRD Convergence Workflow.
 
 An implementation MAY change its internal architecture, orchestration, storage, prompts, or agent structure, but it MUST preserve every invariant defined here.
 
@@ -99,7 +99,7 @@ If the custom decision is materially ambiguous, the workflow MUST request clarif
 
 ## 7. Material Unknown Invariant
 
-A material unresolved question MUST block Canonical RDP completion.
+A material unresolved question MUST block Canonical PRD completion.
 
 A material unknown MUST be resolved by either:
 
@@ -133,7 +133,7 @@ If safe deferral cannot be demonstrated, the decision MUST be treated as materia
 
 ## 9. No Hidden Decision Invariant
 
-No material decision may enter the Canonical RDP solely through:
+No material decision may enter the Canonical PRD solely through:
 
 - synthesis wording;
 - architecture assumptions;
@@ -142,13 +142,13 @@ No material decision may enter the Canonical RDP solely through:
 - audit correction;
 - model recommendation.
 
-Every material statement in the Canonical RDP MUST be traceable to existing authority or be an unambiguous derivation from that authority.
+Every material statement in the Canonical PRD MUST be traceable to existing authority or be an unambiguous derivation from that authority.
 
 ---
 
 ## 10. One Meaning Invariant
 
-A material concept MUST have one active meaning throughout the converged model and Canonical RDP.
+A material concept MUST have one active meaning throughout the converged model and Canonical PRD.
 
 The workflow MUST detect materially conflicting meanings across:
 
@@ -157,7 +157,7 @@ The workflow MUST detect materially conflicting meanings across:
 - domain model;
 - capability model;
 - architecture model;
-- Canonical RDP.
+- Canonical PRD.
 
 Such conflicts MUST be resolved before completion.
 
@@ -174,7 +174,7 @@ Allowed statuses are:
     OUT
     FUTURE
 
-The same capability MUST NOT have contradictory release status in different parts of the Canonical RDP.
+The same capability MUST NOT have contradictory release status in different parts of the Canonical PRD.
 
 For `PARTIAL`, included and excluded behavior MUST both be explicit.
 
@@ -291,7 +291,7 @@ If canonicalization appears to require a new material decision, the workflow MUS
 
 ## 20. Canonical Self-Containment Invariant
 
-The Canonical RDP MUST contain all information required for correct downstream specification.
+The Canonical PRD MUST contain all information required for correct downstream specification.
 
 A downstream consumer MUST NOT require access to:
 
@@ -310,7 +310,7 @@ These MAY remain internal workflow artifacts.
 
 ## 21. Canonical Sufficiency Invariant
 
-Using only the Canonical RDP, downstream work MUST be able to determine:
+Using only the Canonical PRD, downstream work MUST be able to determine:
 
 - what product is being built;
 - who it is for;
@@ -324,13 +324,13 @@ Using only the Canonical RDP, downstream work MUST be able to determine:
 - which material cross-cutting requirements apply;
 - which decisions remain intentionally deferred.
 
-If any of these requires a new material product or system decision, the Canonical RDP is not complete.
+If any of these requires a new material product or system decision, the Canonical PRD is not complete.
 
 ---
 
 ## 22. Canonical Audit Invariant
 
-A Canonical RDP MUST pass an independent audit before the workflow reaches `DONE`.
+A Canonical PRD MUST pass an independent audit before the workflow reaches `DONE`.
 
 The audit MUST verify at least:
 
@@ -351,7 +351,7 @@ The synthesis operation MUST NOT audit itself as the sole quality gate.
 
 A non-material representational defect MAY be repaired directly during canonicalization.
 
-A material defect MUST NOT be repaired only by editing Canonical RDP wording.
+A material defect MUST NOT be repaired only by editing Canonical PRD wording.
 
 If a finding exposes missing or conflicting material authority:
 
@@ -371,7 +371,7 @@ The underlying model MUST be corrected before the final document.
 
 Any new material human decision discovered after modeling has begun MUST cause the workflow to re-enter modeling/convergence.
 
-The workflow MUST NOT proceed directly from a new material decision to final Canonical RDP output using stale derived models.
+The workflow MUST NOT proceed directly from a new material decision to final Canonical PRD output using stale derived models.
 
 ---
 
@@ -422,11 +422,11 @@ The origin of a question MAY differ; the authority semantics MUST remain the sam
 
 The workflow produces one normative downstream artifact:
 
-    Canonical RDP
+    Canonical PRD
 
 Intermediate artifacts MAY exist internally.
 
-They MUST NOT be required as additional normative inputs to correctly interpret the Canonical RDP.
+They MUST NOT be required as additional normative inputs to correctly interpret the Canonical PRD.
 
 ---
 
@@ -467,8 +467,8 @@ Complexity MUST NOT be added solely for anticipated future flexibility.
 
 The workflow MAY enter `DONE` only if all of the following are true:
 
-1. the Canonical RDP exists;
-2. the Canonical RDP Contract is satisfied;
+1. the Canonical PRD exists;
+2. the Canonical PRD Contract is satisfied;
 3. no material unresolved decision remains;
 4. all active human authority is preserved;
 5. domain semantics are internally consistent;
@@ -480,8 +480,8 @@ The workflow MAY enter `DONE` only if all of the following are true:
 11. all remaining undecided matters are safely deferred;
 12. canonicalization introduced no unsupported material authority;
 13. Canonical Audit passes;
-14. the Canonical RDP is self-contained;
-15. the Canonical RDP is sufficient for downstream specification.
+14. the Canonical PRD is self-contained;
+15. the Canonical PRD is sufficient for downstream specification.
 
 The final invariant is:
 

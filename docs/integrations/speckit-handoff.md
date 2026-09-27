@@ -2,11 +2,11 @@
 
 ## 1. Purpose
 
-This contract defines how the PRD project hands a completed Canonical RDP to SpecKit.
+This contract defines how the PRD project hands a completed Canonical PRD to SpecKit.
 
 It is an integration contract.
 
-It does not change the Canonical RDP Contract, Materiality Contract, Human Decision Protocol, Workflow Contract, or RDP Convergence Invariants.
+It does not change the Canonical PRD Contract, Materiality Contract, Human Decision Protocol, Workflow Contract, or PRD Convergence Invariants.
 
 The purpose of this contract is to ensure that SpecKit receives one complete and authoritative upstream product and system definition without depending on internal PRD workflow artifacts.
 
@@ -16,17 +16,17 @@ The purpose of this contract is to ensure that SpecKit receives one complete and
 
 SpecKit MUST receive exactly one normative upstream artifact:
 
-    Canonical RDP
+    Canonical PRD
 
-The Canonical RDP MUST have completed the RDP Convergence Workflow and passed the Canonical Audit before handoff.
+The Canonical PRD MUST have completed the PRD Convergence Workflow and passed the Canonical Audit before handoff.
 
-A draft, intermediate model, or partially converged RDP MUST NOT be handed to SpecKit as authoritative input.
+A draft, intermediate model, or partially converged PRD MUST NOT be handed to SpecKit as authoritative input.
 
 ---
 
 ## 3. Single-Artifact Rule
 
-The Canonical RDP MUST be sufficient as the sole authoritative input from the PRD project.
+The Canonical PRD MUST be sufficient as the sole authoritative input from the PRD project.
 
 SpecKit MUST NOT require access to:
 
@@ -39,7 +39,7 @@ SpecKit MUST NOT require access to:
 - Architecture Model artifacts;
 - convergence findings;
 - Canonical Audit findings;
-- previous Canonical RDP drafts;
+- previous Canonical PRD drafts;
 - internal workflow state.
 
 These artifacts MAY exist for provenance and debugging inside the PRD project, but they are not part of the normative handoff.
@@ -48,19 +48,19 @@ These artifacts MAY exist for provenance and debugging inside the PRD project, b
 
 ## 4. Authority Boundary
 
-At handoff time, the Canonical RDP becomes the authoritative representation of upstream product and system intent for SpecKit.
+At handoff time, the Canonical PRD becomes the authoritative representation of upstream product and system intent for SpecKit.
 
-SpecKit SHOULD interpret the Canonical RDP as the current resolved contract.
+SpecKit SHOULD interpret the Canonical PRD as the current resolved contract.
 
 SpecKit MUST NOT treat earlier PRD artifacts or historical decisions as competing authority.
 
-If historical information conflicts with the Canonical RDP, the Canonical RDP governs the SpecKit workflow.
+If historical information conflicts with the Canonical PRD, the Canonical PRD governs the SpecKit workflow.
 
 ---
 
 ## 5. Decisions Already Made Upstream
 
-SpecKit MUST preserve material decisions already established in the Canonical RDP.
+SpecKit MUST preserve material decisions already established in the Canonical PRD.
 
 This includes, where applicable:
 
@@ -89,7 +89,7 @@ SpecKit MUST NOT silently reopen these decisions during feature specification or
 
 ## 6. Decisions Allowed Downstream
 
-SpecKit MAY make decisions that are explicitly left open by the Canonical RDP or are otherwise non-material under the Materiality Contract.
+SpecKit MAY make decisions that are explicitly left open by the Canonical PRD or are otherwise non-material under the Materiality Contract.
 
 Typical downstream decisions may include:
 
@@ -104,15 +104,15 @@ Typical downstream decisions may include:
 - internal refactoring strategy;
 - test implementation details;
 - local error-handling mechanics;
-- other implementation details that preserve the Canonical RDP contract.
+- other implementation details that preserve the Canonical PRD contract.
 
-A downstream decision MUST remain within all constraints established by the Canonical RDP.
+A downstream decision MUST remain within all constraints established by the Canonical PRD.
 
 ---
 
 ## 7. Deferred Decisions
 
-Explicit Deferred Decisions in the Canonical RDP MAY be resolved by SpecKit.
+Explicit Deferred Decisions in the Canonical PRD MAY be resolved by SpecKit.
 
 SpecKit MUST preserve any constraints attached to a Deferred Decision.
 
@@ -124,7 +124,7 @@ If resolving a Deferred Decision would require changing a material upstream deci
 
 ## 8. Feature Decomposition
 
-SpecKit MAY decompose the Canonical RDP into concrete Features.
+SpecKit MAY decompose the Canonical PRD into concrete Features.
 
 Feature decomposition MUST preserve:
 
@@ -149,7 +149,7 @@ SpecKit MAY split one Capability across multiple Features or combine related Cap
 
 ## 9. Feature Boundary Rule
 
-If the Canonical RDP defines a required responsibility boundary, SpecKit MUST preserve it during Feature decomposition.
+If the Canonical PRD defines a required responsibility boundary, SpecKit MUST preserve it during Feature decomposition.
 
 A downstream Feature MUST NOT:
 
@@ -157,7 +157,7 @@ A downstream Feature MUST NOT:
 - move a material responsibility across an established boundary;
 - introduce a forbidden dependency;
 - collapse two explicitly separated responsibilities;
-- create backward ownership that contradicts the Canonical RDP.
+- create backward ownership that contradicts the Canonical PRD.
 
 SpecKit MAY refine boundaries when the refinement preserves all upstream constraints.
 
@@ -181,7 +181,7 @@ Examples include uncertainty about:
 - which architecture invariant applies;
 - which materially different failure behavior is intended.
 
-Such ambiguity indicates that the Canonical RDP was insufficient for the affected area.
+Such ambiguity indicates that the Canonical PRD was insufficient for the affected area.
 
 ---
 
@@ -201,7 +201,7 @@ The expected flow is:
         ->
     Modeling / Convergence
         ->
-    New Canonical RDP
+    New Canonical PRD
         ->
     SpecKit
 
@@ -209,15 +209,15 @@ SpecKit MUST NOT create upstream authority itself.
 
 ---
 
-## 12. Canonical RDP Revision
+## 12. Canonical PRD Revision
 
-A material upstream correction or new Human Decision MUST result in a new Canonical RDP revision.
+A material upstream correction or new Human Decision MUST result in a new Canonical PRD revision.
 
-The revised Canonical RDP becomes the new authoritative handoff artifact.
+The revised Canonical PRD becomes the new authoritative handoff artifact.
 
 SpecKit SHOULD evaluate affected Feature specifications against the revised contract.
 
-A Canonical RDP revision MUST NOT require unrelated Features to be redesigned unless the new upstream authority materially affects them.
+A Canonical PRD revision MUST NOT require unrelated Features to be redesigned unless the new upstream authority materially affects them.
 
 ---
 
@@ -227,7 +227,7 @@ SpecKit SHOULD prefer forward evolution of Features and responsibility boundarie
 
 Existing earlier Features SHOULD NOT be modified merely because a later Feature can be implemented more conveniently by moving responsibility backward.
 
-Backward modification is acceptable only when required to preserve or restore the authoritative Canonical RDP contract and no reasonable forward-oriented solution exists.
+Backward modification is acceptable only when required to preserve or restore the authoritative Canonical PRD contract and no reasonable forward-oriented solution exists.
 
 The detailed enforcement of Feature evolution policy belongs to SpecKit governance, not to the PRD project.
 
@@ -249,7 +249,7 @@ The PRD project is responsible for determining:
 
 SpecKit is responsible for:
 
-- decomposing the Canonical RDP into implementable Features;
+- decomposing the Canonical PRD into implementable Features;
 - specifying Feature behavior in greater detail;
 - planning implementation;
 - resolving safe downstream decisions;
@@ -264,10 +264,10 @@ The boundary is:
 
 ## 15. Handoff Preconditions
 
-The Canonical RDP MUST NOT be handed to SpecKit unless all of the following are true:
+The Canonical PRD MUST NOT be handed to SpecKit unless all of the following are true:
 
-1. the RDP Convergence Workflow reached `DONE`;
-2. the Canonical RDP Contract is satisfied;
+1. the PRD Convergence Workflow reached `DONE`;
+2. the Canonical PRD Contract is satisfied;
 3. no unresolved Material Decision remains;
 4. all active Human Decisions are preserved;
 5. convergence has passed;
@@ -280,7 +280,7 @@ The Canonical RDP MUST NOT be handed to SpecKit unless all of the following are 
 
 ## 16. SpecKit Entry Condition
 
-SpecKit SHOULD begin specification from the Canonical RDP as a new authoritative input.
+SpecKit SHOULD begin specification from the Canonical PRD as a new authoritative input.
 
 SpecKit SHOULD NOT begin by re-discovering product intent already established upstream.
 
@@ -292,7 +292,7 @@ If clarification reveals a missing Material Decision, the issue MUST be escalate
 
 ## 17. Handoff Integrity
 
-The Canonical RDP supplied to SpecKit MUST be the same revision that passed Canonical Audit.
+The Canonical PRD supplied to SpecKit MUST be the same revision that passed Canonical Audit.
 
 The handoff process SHOULD preserve:
 
@@ -310,4 +310,4 @@ The exact integrity mechanism is an implementation detail of the integration.
 
 The core integration invariant is:
 
-> SpecKit receives one Canonical RDP, preserves its material product and system decisions, resolves only valid downstream decisions, and returns any newly discovered material ambiguity to the PRD Convergence Workflow instead of silently designing the product itself.
+> SpecKit receives one Canonical PRD, preserves its material product and system decisions, resolves only valid downstream decisions, and returns any newly discovered material ambiguity to the PRD Convergence Workflow instead of silently designing the product itself.

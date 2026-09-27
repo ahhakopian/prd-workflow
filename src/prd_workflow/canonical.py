@@ -8,24 +8,24 @@ from pathlib import Path
 
 from pydantic import TypeAdapter
 
-from rdp_workflow.ai import (
+from prd_workflow.ai import (
     CANONICAL_AUDIT_RESULT_TYPE,
     CANONICAL_RESULT_TYPE,
     AIExecutor,
 )
-from rdp_workflow.ai_contracts import (
+from prd_workflow.ai_contracts import (
     AuditEditorialOutput,
     AuditHumanDecisionOutput,
     AuditPassOutput,
     AuditRemodelOutput,
     material_decision_from_draft,
 )
-from rdp_workflow.models import (
+from prd_workflow.models import (
     AuditResult,
     CanonicalActor,
     CanonicalCapability,
     CanonicalDeferredDecision,
-    CanonicalRDP,
+    CanonicalPRD,
     CanonicalResponsibilityBoundary,
     CanonicalScopeEntry,
     ModelingResult,
@@ -103,7 +103,7 @@ def compose_canonical(
     models: ModelingResult,
     editorial_findings: tuple[str, ...],
     ai: AIExecutor,
-) -> CanonicalRDP:
+) -> CanonicalPRD:
     """Constrain one AI invocation to non-authoritative Canonical composition."""
 
     result = ai.invoke(
@@ -118,7 +118,7 @@ def compose_canonical(
     return TypeAdapter(CANONICAL_RESULT_TYPE).validate_python(result)
 
 
-def render_markdown(document: CanonicalRDP) -> str:
+def render_markdown(document: CanonicalPRD) -> str:
     """Render the exact downstream artifact with no reasoning or AI operation."""
 
     values = _render_template_values(document)
@@ -151,12 +151,12 @@ def render_markdown(document: CanonicalRDP) -> str:
 def load_canonical_template() -> str:
     """Load the fixed Canonical Markdown layout from the installed package."""
 
-    return resources.files("rdp_workflow").joinpath(
-        "templates", "canonical-rdp.md"
+    return resources.files("prd_workflow").joinpath(
+        "templates", "canonical-prd.md"
     ).read_text(encoding="utf-8")
 
 
-def _render_template_values(document: CanonicalRDP) -> dict[str, str]:
+def _render_template_values(document: CanonicalPRD) -> dict[str, str]:
     product = document.product_definition
     scope = document.scope_and_release_boundary
     actors = document.actors_and_roles
@@ -372,7 +372,7 @@ def _render_deferred_decision_blocks(
     return "\n\n".join(blocks) if blocks else "- None established."
 
 
-def validate_contract(document: CanonicalRDP) -> tuple[str, ...]:
+def validate_contract(document: CanonicalPRD) -> tuple[str, ...]:
     """Return deterministic structural contract findings, without semantic inference."""
 
     findings: list[str] = []
@@ -541,7 +541,7 @@ def validate_contract(document: CanonicalRDP) -> tuple[str, ...]:
 def audit_canonical(
     authority: dict[str, object],
     models: ModelingResult,
-    document: CanonicalRDP,
+    document: CanonicalPRD,
     rendered_markdown: str,
     ai: AIExecutor,
 ) -> AuditResult:
@@ -553,7 +553,7 @@ def audit_canonical(
             payload={
                 "active_authority": authority,
                 "converged_modeling_result": models.model_dump(mode="json"),
-                "structured_canonical_rdp": document.model_dump(mode="json"),
+                "structured_canonical_prd": document.model_dump(mode="json"),
                 "exact_rendered_markdown_candidate": rendered_markdown,
             },
             result_type=CANONICAL_AUDIT_RESULT_TYPE,
@@ -585,27 +585,27 @@ def final_canonical_path(run: WorkflowRun, run_dir: Path) -> Path:
     """Expose the sole downstream artifact only after all terminal gates hold."""
 
     if run.state is not WorkflowState.DONE:
-        raise ValueError("final Canonical RDP is available only for a DONE run")
+        raise ValueError("final Canonical PRD is available only for a DONE run")
     if run.convergence_result is None or run.convergence_result.status != "PASS":
         raise ValueError("DONE run requires Convergence PASS")
     if run.canonical_candidate is None:
-        raise ValueError("DONE run is missing its Canonical RDP candidate")
+        raise ValueError("DONE run is missing its Canonical PRD candidate")
     if run.audit_result is None or run.audit_result.status != "PASS":
         raise ValueError("DONE run requires Canonical Audit PASS")
     findings = validate_contract(run.canonical_candidate)
     if findings:
         raise ValueError(
-            "DONE run has a contract-invalid Canonical RDP candidate: "
+            "DONE run has a contract-invalid Canonical PRD candidate: "
             + "; ".join(findings)
         )
-    path = Path(run_dir) / "canonical-rdp.md"
+    path = Path(run_dir) / "canonical-prd.md"
     if not path.is_file():
-        raise FileNotFoundError(f"DONE run is missing canonical-rdp.md: {path}")
+        raise FileNotFoundError(f"DONE run is missing canonical-prd.md: {path}")
     expected = render_markdown(run.canonical_candidate).encode("utf-8")
     if path.read_bytes() != expected:
         raise ValueError(
-            "DONE run canonical-rdp.md does not match the deterministic rendering "
-            "of its persisted Canonical RDP candidate"
+            "DONE run canonical-prd.md does not match the deterministic rendering "
+            "of its persisted Canonical PRD candidate"
         )
     return path
 

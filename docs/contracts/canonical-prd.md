@@ -1,12 +1,12 @@
-# Canonical RDP Contract
+# Canonical PRD Contract
 
 ## 1. Purpose
 
-The Canonical RDP is the final, self-contained Product & System Contract produced from a source PRD.
+The Canonical PRD is the final, self-contained Product & System Contract produced from a source PRD.
 
 It defines the product and system sufficiently for a downstream specification workflow to continue without making new material product or system decisions.
 
-The Canonical RDP is the definition of done for the RDP Convergence Workflow.
+The Canonical PRD is the definition of done for the PRD Convergence Workflow.
 
 It MUST describe the current intended system, not the history of how decisions were reached.
 
@@ -14,7 +14,7 @@ It MUST describe the current intended system, not the history of how decisions w
 
 ## 2. Canonicality Rule
 
-A Canonical RDP is ready only when:
+A Canonical PRD is ready only when:
 
 - all material product and system questions are resolved;
 - its sections are mutually consistent;
@@ -76,7 +76,7 @@ An AI recommendation is advisory only and MUST NOT become authority without an e
 
 ## 5. Required Structure
 
-A Canonical RDP MUST contain the following sections:
+A Canonical PRD MUST contain the following sections:
 
 1. Product Definition
 2. Scope & Release Boundary
@@ -302,7 +302,7 @@ Before the document can be Canonical, all of the following MUST hold:
 
 ## 17. Downstream Sufficiency
 
-The Canonical RDP MUST be understandable and usable without access to:
+The Canonical PRD MUST be understandable and usable without access to:
 
 - the source PRD;
 - clarification history;
@@ -311,7 +311,7 @@ The Canonical RDP MUST be understandable and usable without access to:
 - decision history;
 - previous drafts.
 
-A downstream specification workflow, using only the Canonical RDP, MUST be able to determine:
+A downstream specification workflow, using only the Canonical PRD, MUST be able to determine:
 
 - what product is being built;
 - what is in and out of the target release;
@@ -324,13 +324,13 @@ A downstream specification workflow, using only the Canonical RDP, MUST be able 
 - which responsibility boundaries must be preserved;
 - which decisions remain intentionally open downstream.
 
-If a new material product or system decision is still required to continue correctly, the RDP is not Canonical.
+If a new material product or system decision is still required to continue correctly, the PRD is not Canonical.
 
 ---
 
 ## 18. Provenance Policy
 
-The Canonical RDP represents current authoritative meaning.
+The Canonical PRD represents current authoritative meaning.
 
 It SHOULD NOT contain:
 
@@ -341,7 +341,7 @@ It SHOULD NOT contain:
 - intermediate reasoning;
 - workflow history.
 
-Such information MAY be retained internally by the workflow but is not part of the Canonical RDP contract.
+Such information MAY be retained internally by the workflow but is not part of the Canonical PRD contract.
 
 Stable identifiers SHOULD be used where downstream traceability is valuable.
 
@@ -349,7 +349,7 @@ Stable identifiers SHOULD be used where downstream traceability is valuable.
 
 ## 19. Definition of Done
 
-A Canonical RDP is complete when:
+A Canonical PRD is complete when:
 
 1. all required sections are present;
 2. the target release is explicit;

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from rdp_workflow.models import (
+from prd_workflow.models import (
     CustomAnswer,
     Decision,
     DecisionOption,
@@ -14,11 +14,11 @@ from rdp_workflow.models import (
     OptionWithClarification,
     WorkflowState,
 )
-from rdp_workflow.storage import FileStorage
+from prd_workflow.storage import FileStorage
 
 
 def storage_at(tmp_path: Path) -> FileStorage:
-    return FileStorage(tmp_path / ".rdp")
+    return FileStorage(tmp_path / ".prd")
 
 
 def resolved_decision(answer: OptionSelection | OptionWithClarification | CustomAnswer) -> Decision:
@@ -94,7 +94,7 @@ def test_non_markdown_and_non_utf8_source_fail_deterministically(tmp_path: Path)
 
 def test_explicit_state_survives_save_and_process_restart(tmp_path: Path) -> None:
     source = create_source(tmp_path)
-    root = tmp_path / ".rdp"
+    root = tmp_path / ".prd"
     first_process = FileStorage(root)
     run = first_process.create_run(source)
     run.state = WorkflowState.CANONICALIZATION
@@ -159,7 +159,7 @@ def test_file_presence_cannot_change_or_recompute_state(tmp_path: Path) -> None:
     storage.save_run(run)
     run_dir = storage.run_directory(run.run_id)
 
-    (run_dir / "canonical-rdp.md").write_text("# Untrusted file", encoding="utf-8")
+    (run_dir / "canonical-prd.md").write_text("# Untrusted file", encoding="utf-8")
     (run_dir / "anything-else.json").write_text(
         '{"state": "DONE"}', encoding="utf-8"
     )

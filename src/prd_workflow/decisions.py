@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import TypeAdapter
 
-from rdp_workflow.models import (
+from prd_workflow.models import (
     CustomAnswer,
     Decision,
     HumanAnswer,

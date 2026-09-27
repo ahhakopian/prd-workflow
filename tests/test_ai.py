@@ -7,14 +7,14 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from rdp_workflow.ai import (
+from prd_workflow.ai import (
     CONVERGENCE_RESULT_TYPE,
     CodexAIExecutor,
     load_committed_schema,
     load_prompt,
     result_type_for_operation,
 )
-from rdp_workflow.ai_contracts import ConvergencePassOutput
+from prd_workflow.ai_contracts import ConvergencePassOutput
 
 
 def test_codex_adapter_requests_strict_schema_and_validates_final_output(

@@ -7,14 +7,14 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from rdp_workflow.models import (
+from prd_workflow.models import (
     Decision,
     DecisionOption,
     OptionSelection,
     WorkflowState,
 )
-from rdp_workflow.storage import FileStorage
-from rdp_workflow.workflow import WorkflowService
+from prd_workflow.storage import FileStorage
+from prd_workflow.workflow import WorkflowService
 
 
 class RecordingAI:
@@ -67,7 +67,7 @@ def _pending_decision(
 
 def _service_with_run(tmp_path: Path) -> tuple[WorkflowService, RecordingAI, str]:
     ai = RecordingAI()
-    storage = FileStorage(tmp_path / ".rdp")
+    storage = FileStorage(tmp_path / ".prd")
     run = storage.create_run(_source(tmp_path))
     return WorkflowService(storage, ai), ai, run.run_id
 
@@ -85,7 +85,7 @@ def _assert_source_integrity_blocks(
 
 
 def test_unchanged_source_integrity_survives_process_restart(tmp_path: Path) -> None:
-    storage = FileStorage(tmp_path / ".rdp")
+    storage = FileStorage(tmp_path / ".prd")
     run = storage.create_run(_source(tmp_path))
     ai = RecordingAI()
 
@@ -146,7 +146,7 @@ def test_source_integrity_block_preserves_accepted_human_authority(
 def test_invalid_source_before_creation_creates_no_run(
     tmp_path: Path, kind: str
 ) -> None:
-    storage = FileStorage(tmp_path / ".rdp")
+    storage = FileStorage(tmp_path / ".prd")
     if kind == "missing":
         source = tmp_path / "missing.md"
         expected = FileNotFoundError

@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from uuid import uuid4
 
-from rdp_workflow.models import WorkflowRun
+from prd_workflow.models import WorkflowRun
 
 
 class SourceIntegrityError(ValueError):
@@ -16,9 +16,9 @@ class SourceIntegrityError(ValueError):
 
 
 class FileStorage:
-    """Store runs under the frozen ``.rdp/runs/<run-id>`` layout."""
+    """Store runs under the frozen ``.prd/runs/<run-id>`` layout."""
 
-    def __init__(self, root: Path = Path(".rdp")) -> None:
+    def __init__(self, root: Path = Path(".prd")) -> None:
         self.root = Path(root)
 
     def create_run(self, source_path: Path, *, run_id: str | None = None) -> WorkflowRun:
@@ -120,7 +120,7 @@ class FileStorage:
         if not run_dir.is_dir():
             raise FileNotFoundError(f"Run directory does not exist: {run_dir}")
 
-        destination = run_dir / "canonical-rdp.md"
+        destination = run_dir / "canonical-prd.md"
         temporary_path: Path | None = None
         try:
             with tempfile.NamedTemporaryFile(

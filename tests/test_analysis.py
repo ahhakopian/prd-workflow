@@ -5,8 +5,8 @@ from typing import Any
 
 import pytest
 
-from rdp_workflow.analysis import analyze_intake, derive_models, review_convergence
-from rdp_workflow.ai_contracts import (
+from prd_workflow.analysis import analyze_intake, derive_models, review_convergence
+from prd_workflow.ai_contracts import (
     ArchitectureOutput,
     CapabilitiesOutput,
     ConvergenceHumanDecisionOutput,
@@ -16,7 +16,7 @@ from rdp_workflow.ai_contracts import (
     DomainOutput,
     MaterialDecisionDraft,
 )
-from rdp_workflow.models import (
+from prd_workflow.models import (
     ArchitectureView,
     CapabilityValue,
     Decision,

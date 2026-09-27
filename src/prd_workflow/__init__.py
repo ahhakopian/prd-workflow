@@ -1,8 +1,8 @@
-"""Core types and persistence for the RDP Convergence Workflow."""
+"""Core types and persistence for the PRD Convergence Workflow."""
 
-from rdp_workflow.models import (
+from prd_workflow.models import (
     AuditResult,
-    CanonicalRDP,
+    CanonicalPRD,
     ConvergenceResult,
     Decision,
     DecisionOption,
@@ -14,7 +14,7 @@ from rdp_workflow.models import (
 
 __all__ = [
     "AuditResult",
-    "CanonicalRDP",
+    "CanonicalPRD",
     "ConvergenceResult",
     "Decision",
     "DecisionOption",

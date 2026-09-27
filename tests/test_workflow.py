@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from rdp_workflow.models import WorkflowRun, WorkflowState
-from rdp_workflow.workflow import IllegalTransitionError, transition
+from prd_workflow.models import WorkflowRun, WorkflowState
+from prd_workflow.workflow import IllegalTransitionError, transition
 
 
 EXPECTED_TRANSITIONS = {

@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from rdp_workflow.ai import AIExecutor
-from rdp_workflow.analysis import analyze_intake, derive_models, review_convergence
-from rdp_workflow.canonical import (
+from prd_workflow.ai import AIExecutor
+from prd_workflow.analysis import analyze_intake, derive_models, review_convergence
+from prd_workflow.canonical import (
     audit_canonical,
     compose_canonical,
     render_markdown,
     validate_contract,
 )
-from rdp_workflow.decisions import accept_answer, active_authority
-from rdp_workflow.models import HumanAnswer, WorkflowRun, WorkflowState
-from rdp_workflow.storage import FileStorage, SourceIntegrityError
+from prd_workflow.decisions import accept_answer, active_authority
+from prd_workflow.models import HumanAnswer, WorkflowRun, WorkflowState
+from prd_workflow.storage import FileStorage, SourceIntegrityError
 
 
 _LEGAL_TRANSITIONS: dict[WorkflowState, frozenset[WorkflowState]] = {

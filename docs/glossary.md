@@ -18,21 +18,21 @@ Its material meaning remains authoritative unless explicitly superseded by a lat
 
 ---
 
-## Canonical RDP
+## Canonical PRD
 
-The final self-contained Product & System Contract produced by the RDP Convergence Workflow.
+The final self-contained Product & System Contract produced by the PRD Convergence Workflow.
 
 It contains the complete and internally consistent product and system definition required for downstream specification.
 
-A Canonical RDP contains no unresolved Material Decisions.
+A Canonical PRD contains no unresolved Material Decisions.
 
 It is the single normative output of the workflow.
 
 ---
 
-## RDP Convergence Workflow
+## PRD Convergence Workflow
 
-The workflow that transforms a Source PRD into a Canonical RDP.
+The workflow that transforms a Source PRD into a Canonical PRD.
 
 Its responsibility is to discover missing or inconsistent material information, obtain required Human Decisions, build and reconcile derived models, and establish convergence before canonicalization.
 
@@ -322,7 +322,7 @@ Modeling MUST NOT create their authoritative answers.
 
 ## Canonicalization
 
-The process of compiling a converged product and system definition into the Canonical RDP.
+The process of compiling a converged product and system definition into the Canonical PRD.
 
 Canonicalization is a synthesis operation.
 
@@ -332,11 +332,11 @@ It MUST NOT introduce new Material Decisions or new Material Authority.
 
 ## Canonical Audit
 
-The independent validation of a Canonical RDP candidate.
+The independent validation of a Canonical PRD candidate.
 
 The Canonical Audit verifies:
 
-- compliance with the Canonical RDP Contract;
+- compliance with the Canonical PRD Contract;
 - preservation of Active Authority;
 - internal consistency;
 - absence of unresolved Material Decisions;
@@ -350,13 +350,13 @@ The Canonical Audit does not create Authority.
 
 ## Self-Contained
 
-A property of the Canonical RDP meaning that correct downstream interpretation does not require access to the Source PRD, decision history, AI recommendations, or intermediate workflow artifacts.
+A property of the Canonical PRD meaning that correct downstream interpretation does not require access to the Source PRD, decision history, AI recommendations, or intermediate workflow artifacts.
 
 ---
 
 ## Downstream Consumer
 
-Any specification or implementation workflow that receives the Canonical RDP.
+Any specification or implementation workflow that receives the Canonical PRD.
 
 Core PRD contracts MUST NOT depend on a particular Downstream Consumer.
 
@@ -366,7 +366,7 @@ Tool-specific integration rules belong in separate integration contracts.
 
 ## Downstream Sufficiency
 
-The condition in which a Downstream Consumer can continue specification using only the Canonical RDP without making new Material product or system decisions.
+The condition in which a Downstream Consumer can continue specification using only the Canonical PRD without making new Material product or system decisions.
 
 ---
 
@@ -384,13 +384,13 @@ Internal information describing where a requirement, decision, or artifact origi
 
 Provenance may include historical decisions, AI recommendations, findings, and supersession relationships.
 
-Provenance is internal workflow information unless explicitly required by the Canonical RDP Contract.
+Provenance is internal workflow information unless explicitly required by the Canonical PRD Contract.
 
 ---
 
 ## Target Release
 
-The release whose required implementation scope is defined by the Canonical RDP.
+The release whose required implementation scope is defined by the Canonical PRD.
 
 Material Capabilities must be classified for the Target Release as:
 

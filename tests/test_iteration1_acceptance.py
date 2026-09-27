@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from rdp_workflow.ai_contracts import (
+from prd_workflow.ai_contracts import (
     ArchitectureOutput,
     AuditPassOutput,
     CapabilitiesOutput,
@@ -15,8 +15,8 @@ from rdp_workflow.ai_contracts import (
     DomainOutput,
     MaterialDecisionDraft,
 )
-from rdp_workflow.canonical import final_canonical_path, render_markdown
-from rdp_workflow.models import (
+from prd_workflow.canonical import final_canonical_path, render_markdown
+from prd_workflow.models import (
     ArchitectureView,
     AuditResult,
     CanonicalActor,
@@ -28,7 +28,7 @@ from rdp_workflow.models import (
     CanonicalDomainModel,
     CanonicalFunctionalCapabilities,
     CanonicalProductDefinition,
-    CanonicalRDP,
+    CanonicalPRD,
     CanonicalResponsibilityBoundaries,
     CanonicalResponsibilityBoundary,
     CanonicalScope,
@@ -44,8 +44,8 @@ from rdp_workflow.models import (
     ProductContext,
     WorkflowState,
 )
-from rdp_workflow.storage import FileStorage
-from rdp_workflow.workflow import WorkflowService
+from prd_workflow.storage import FileStorage
+from prd_workflow.workflow import WorkflowService
 
 
 CLARIFICATION = (
@@ -214,8 +214,8 @@ def model_outputs(version: str) -> tuple[object, object, object]:
     )
 
 
-def final_document() -> CanonicalRDP:
-    return CanonicalRDP(
+def final_document() -> CanonicalPRD:
+    return CanonicalPRD(
         product_definition=CanonicalProductDefinition(
             summary="A controlled employee expense submission and manager review product.",
             problem="Employees need business expenses reviewed before reimbursement.",
@@ -414,7 +414,7 @@ def test_iteration_1_walking_skeleton_filesystem_acceptance(tmp_path: Path) -> N
         candidate,
         AuditPassOutput(outcome="PASS"),
     )
-    storage_root = tmp_path / ".rdp"
+    storage_root = tmp_path / ".prd"
     service = WorkflowService(FileStorage(storage_root), ai)
 
     started = service.start(source)
@@ -505,8 +505,8 @@ def test_iteration_1_walking_skeleton_filesystem_acceptance(tmp_path: Path) -> N
     ]
     assert ai.calls[-2]["payload"]["converged_modeling_result"] == post_answer_outputs_to_model_dump(post_answer_outputs)
     assert ai.calls[-1]["payload"]["exact_rendered_markdown_candidate"] == expected_markdown
-    assert handoff == run_dir / "canonical-rdp.md"
-    assert handoff.name == "canonical-rdp.md"
+    assert handoff == run_dir / "canonical-prd.md"
+    assert handoff.name == "canonical-prd.md"
     assert handoff.read_text(encoding="utf-8") == expected_markdown
     assert CLARIFICATION in expected_markdown
     assert decision.options[0].text not in expected_markdown

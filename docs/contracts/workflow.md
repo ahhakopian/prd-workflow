@@ -1,8 +1,8 @@
-# RDP Convergence Workflow Contract
+# PRD Convergence Workflow Contract
 
 ## 1. Purpose
 
-This contract defines the normative workflow that transforms a Source PRD into a Canonical RDP.
+This contract defines the normative workflow that transforms a Source PRD into a Canonical PRD.
 
 The workflow exists to:
 
@@ -10,9 +10,9 @@ The workflow exists to:
 - obtain authoritative human decisions where required;
 - derive a coherent domain, capability, responsibility, and high-level architecture model;
 - converge those views into one internally consistent product and system definition;
-- produce a self-contained Canonical RDP.
+- produce a self-contained Canonical PRD.
 
-The workflow MUST follow the Canonical RDP Contract, Materiality Contract, and Human Decision Protocol.
+The workflow MUST follow the Canonical PRD Contract, Materiality Contract, and Human Decision Protocol.
 
 ---
 
@@ -34,19 +34,19 @@ The Source PRD is authoritative only for statements that have not been explicitl
 
 The successful output is:
 
-    Canonical RDP
+    Canonical PRD
 
-The Canonical RDP MUST satisfy the Canonical RDP Contract and its Definition of Done.
+The Canonical PRD MUST satisfy the Canonical PRD Contract and its Definition of Done.
 
 Intermediate artifacts are internal workflow state.
 
-They MUST NOT be required to correctly interpret the final Canonical RDP.
+They MUST NOT be required to correctly interpret the final Canonical PRD.
 
 ---
 
 ## 4. Workflow Principle
 
-The workflow MUST continue until the Canonical RDP can be produced without making any new material product or system decision during canonicalization.
+The workflow MUST continue until the Canonical PRD can be produced without making any new material product or system decision during canonicalization.
 
 The workflow MUST NOT use canonicalization itself to resolve uncertainty.
 
@@ -163,7 +163,7 @@ The workflow MUST NOT return directly from such a decision to final canonicaliza
 
 ### Purpose
 
-Build and converge the product and system understanding required by the Canonical RDP Contract.
+Build and converge the product and system understanding required by the Canonical PRD Contract.
 
 ### Internal Modeling Sequence
 
@@ -322,7 +322,7 @@ When these conditions hold:
 
 ### Purpose
 
-Compile the converged product and system definition into the Canonical RDP.
+Compile the converged product and system definition into the Canonical PRD.
 
 Canonicalization is a synthesis step, not a decision-making step.
 
@@ -340,7 +340,7 @@ Canonical synthesis MUST:
 - preserve required architectural invariants;
 - preserve material cross-cutting requirements;
 - preserve explicit safe-to-defer decisions;
-- produce the structure required by the Canonical RDP Contract.
+- produce the structure required by the Canonical PRD Contract.
 
 Canonical synthesis MUST NOT:
 
@@ -355,11 +355,11 @@ Canonical synthesis MUST NOT:
 
 ## 13. Canonical Audit
 
-Every synthesized Canonical RDP MUST pass an independent audit before completion.
+Every synthesized Canonical PRD MUST pass an independent audit before completion.
 
 The audit MUST verify:
 
-- compliance with the Canonical RDP Contract;
+- compliance with the Canonical PRD Contract;
 - internal consistency;
 - preservation of active human authority;
 - absence of unsupported material semantics;
@@ -389,11 +389,11 @@ If the audit detects a material question requiring new authority:
 
 If the audit detects only a non-material representational or editorial defect:
 
-    repair the Canonical RDP
+    repair the Canonical PRD
     ->
     audit again
 
-A material audit finding MUST NOT be repaired solely by rewriting Canonical RDP text if the underlying product or system model is unresolved.
+A material audit finding MUST NOT be repaired solely by rewriting Canonical PRD text if the underlying product or system model is unresolved.
 
 ---
 
@@ -401,13 +401,13 @@ A material audit finding MUST NOT be repaired solely by rewriting Canonical RDP 
 
 `DONE` means:
 
-- the Canonical RDP exists;
+- the Canonical PRD exists;
 - all required sections are complete;
 - all material questions are resolved;
 - remaining deferred decisions are safe to defer;
 - internal consistency checks pass;
 - the Canonical Audit passes;
-- the Canonical RDP is self-contained.
+- the Canonical PRD is self-contained.
 
 `DONE` is the only successful terminal state.
 
@@ -475,7 +475,7 @@ When authority changes:
 
 Historical decisions MAY be retained internally for provenance.
 
-They SHOULD NOT appear in the Canonical RDP unless needed to understand current authoritative meaning.
+They SHOULD NOT appear in the Canonical PRD unless needed to understand current authoritative meaning.
 
 ---
 
@@ -485,7 +485,7 @@ A decision MUST NOT be deferred merely to avoid human interaction.
 
 Deferral is allowed only when the Materiality Contract classifies the decision as safe to defer.
 
-Every deferred decision included in the Canonical RDP MUST state:
+Every deferred decision included in the Canonical PRD MUST state:
 
 - what remains undecided;
 - why it is safe to defer;
@@ -577,10 +577,10 @@ The workflow is complete only when:
 9. required responsibility boundaries have converged;
 10. material cross-cutting requirements are defined;
 11. remaining undecided matters are safely deferred;
-12. Canonical RDP synthesis introduces no new material decisions;
+12. Canonical PRD synthesis introduces no new material decisions;
 13. Canonical Audit passes;
-14. the final Canonical RDP satisfies its own Definition of Done.
+14. the final Canonical PRD satisfies its own Definition of Done.
 
 The central workflow invariant is:
 
-> The workflow is not finished when every processing step has run. It is finished when the Canonical RDP is complete, internally consistent, authoritative, and sufficient for downstream specification without new material product or system decisions.
+> The workflow is not finished when every processing step has run. It is finished when the Canonical PRD is complete, internally consistent, authoritative, and sufficient for downstream specification without new material product or system decisions.

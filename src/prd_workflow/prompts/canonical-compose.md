@@ -1,8 +1,8 @@
-# Canonical RDP Composition
+# Canonical PRD Composition
 
 Perform only the supplied workflow analysis operation. Use only the supplied payload as input. Do not use external information or unstated assumptions. Authority status within the payload is defined below. Return one JSON value matching the output schema.
 
-Compose one structured, self-contained Canonical RDP from the supplied Active Authority and Convergence-PASS ModelingResult. Composition is derived and non-authoritative.
+Compose one structured, self-contained Canonical PRD from the supplied Active Authority and Convergence-PASS ModelingResult. Composition is derived and non-authoritative.
 
 The required sections, in order, are:
 

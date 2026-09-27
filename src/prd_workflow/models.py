@@ -1,4 +1,4 @@
-"""Persisted domain models for the RDP Convergence Workflow."""
+"""Persisted domain models for the PRD Convergence Workflow."""
 
 from __future__ import annotations
 
@@ -453,8 +453,8 @@ class CanonicalDeferredDecisions(_CanonicalSection):
     fixed_upstream_constraints: tuple[str, ...] = ()
 
 
-class CanonicalRDP(BaseModel):
-    """The ten required sections of a Canonical RDP candidate."""
+class CanonicalPRD(BaseModel):
+    """The ten required sections of a Canonical PRD candidate."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -530,7 +530,7 @@ class WorkflowRun(BaseModel):
     decisions: tuple[Decision, ...] = ()
     modeling_result: ModelingResult | None = None
     convergence_result: ConvergenceResult | None = None
-    canonical_candidate: CanonicalRDP | None = None
+    canonical_candidate: CanonicalPRD | None = None
     audit_result: AuditResult | None = None
     diagnostics: tuple[str, ...] = ()
 

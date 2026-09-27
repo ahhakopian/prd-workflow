@@ -5,9 +5,9 @@ from typing import Any
 
 import pytest
 
-import rdp_workflow.cli as cli
-from rdp_workflow.ai_contracts import MaterialDecisionDraft
-from rdp_workflow.models import (
+import prd_workflow.cli as cli
+from prd_workflow.ai_contracts import MaterialDecisionDraft
+from prd_workflow.models import (
     CustomAnswer,
     Decision,
     DecisionOption,
@@ -15,7 +15,7 @@ from rdp_workflow.models import (
     OptionWithClarification,
     WorkflowState,
 )
-from rdp_workflow.storage import FileStorage
+from prd_workflow.storage import FileStorage
 
 
 class ScriptedAI:
@@ -99,7 +99,7 @@ def create_waiting_run(
     *,
     decision: Decision | None = None,
 ) -> tuple[FileStorage, str]:
-    storage = FileStorage(tmp_path / ".rdp")
+    storage = FileStorage(tmp_path / ".prd")
     run = storage.create_run(source_at(tmp_path))
     current = decision or pending_decision()
     run.state = WorkflowState.WAITING_HUMAN
@@ -125,7 +125,7 @@ def test_cli_start_prints_intake_run_id_and_next_action(
     assert output.err == ""
     assert output.out.splitlines()[1:] == [
         "state: INTAKE",
-        f"next: rdp advance {run_id}",
+        f"next: prd advance {run_id}",
     ]
     assert FileStorage().load_run(run_id).state is WorkflowState.INTAKE
     assert ai.calls == []
@@ -203,7 +203,7 @@ def test_cli_status_done_reports_no_for_invalid_final_artifact(
     install_ai(monkeypatch, tmp_path, ai)
     storage = FileStorage()
     run = storage.create_run(source_at(tmp_path), run_id="done-status")
-    storage.write_canonical(run.run_id, "# Canonical RDP\n")
+    storage.write_canonical(run.run_id, "# Canonical PRD\n")
     run.state = WorkflowState.DONE
     storage.save_run(run)
 
@@ -213,7 +213,7 @@ def test_cli_status_done_reports_no_for_invalid_final_artifact(
     assert result == 0
     assert "state: DONE" in output.out
     assert "canonical_available: no" in output.out
-    assert "canonical-rdp.md" not in output.out
+    assert "canonical-prd.md" not in output.out
     assert "run.json" not in output.out
 
 
@@ -231,7 +231,7 @@ def test_cli_status_done_reports_yes_when_terminal_guard_succeeds(
     monkeypatch.setattr(
         cli,
         "final_canonical_path",
-        lambda current, run_dir: run_dir / "canonical-rdp.md",
+        lambda current, run_dir: run_dir / "canonical-prd.md",
     )
 
     result = cli.main(["status", run.run_id])
@@ -239,7 +239,7 @@ def test_cli_status_done_reports_yes_when_terminal_guard_succeeds(
     output = capsys.readouterr()
     assert result == 0
     assert "canonical_available: yes" in output.out
-    assert "canonical-rdp.md" not in output.out
+    assert "canonical-prd.md" not in output.out
 
 
 def test_cli_waiting_human_display_is_complete_and_labels_recommendation_advisory(
@@ -414,7 +414,7 @@ def test_cli_handoff_done_prints_only_canonical_path(
     install_ai(monkeypatch, tmp_path, ai)
     storage = FileStorage()
     run = storage.create_run(source_at(tmp_path), run_id="done-run")
-    path = storage.run_directory(run.run_id) / "canonical-rdp.md"
+    path = storage.run_directory(run.run_id) / "canonical-prd.md"
     run.state = WorkflowState.DONE
     storage.save_run(run)
     monkeypatch.setattr(cli, "final_canonical_path", lambda current, run_dir: path)

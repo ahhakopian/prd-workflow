@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from rdp_workflow.ai_contracts import (
+from prd_workflow.ai_contracts import (
     ArchitectureOutput,
     CapabilitiesOutput,
     ConvergenceHumanDecisionOutput,
@@ -15,11 +15,11 @@ from rdp_workflow.ai_contracts import (
     DomainOutput,
     MaterialDecisionDraft,
 )
-from rdp_workflow.decisions import active_authority
-from rdp_workflow.models import (
+from prd_workflow.decisions import active_authority
+from prd_workflow.models import (
     ArchitectureView,
     AuditResult,
-    CanonicalRDP,
+    CanonicalPRD,
     CapabilityValue,
     ConvergenceResult,
     Decision,
@@ -29,8 +29,8 @@ from rdp_workflow.models import (
     ProductContext,
     WorkflowState,
 )
-from rdp_workflow.storage import FileStorage
-from rdp_workflow.workflow import WorkflowService
+from prd_workflow.storage import FileStorage
+from prd_workflow.workflow import WorkflowService
 
 
 class ScriptedAI:
@@ -145,8 +145,8 @@ def modeling_decision_draft() -> MaterialDecisionDraft:
     )
 
 
-def canonical_candidate() -> CanonicalRDP:
-    return CanonicalRDP(
+def canonical_candidate() -> CanonicalPRD:
+    return CanonicalPRD(
         product_definition="Product definition",
         scope_and_release_boundary="Release scope",
         actors_and_roles="Actors and roles",
@@ -161,7 +161,7 @@ def canonical_candidate() -> CanonicalRDP:
 
 
 def service_at(tmp_path: Path, ai: ScriptedAI) -> WorkflowService:
-    return WorkflowService(FileStorage(tmp_path / ".rdp"), ai)
+    return WorkflowService(FileStorage(tmp_path / ".prd"), ai)
 
 
 def start_in_modeling(service: WorkflowService, tmp_path: Path) -> str:
