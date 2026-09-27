@@ -434,7 +434,7 @@ def test_iteration_1_walking_skeleton_filesystem_acceptance(tmp_path: Path) -> N
     assert waiting.modeling_result is not None
     old_model = waiting.modeling_result.model_copy(deep=True)
     authority_before_answer = ai.calls[1]["payload"]["active_authority"]
-    assert authority_before_answer["human_decisions"] == ()
+    assert authority_before_answer["human_decisions"] == []
     assert decision.recommendation_rationale not in json.dumps(authority_before_answer)
 
     reloaded_service = WorkflowService(FileStorage(storage_root), ai)

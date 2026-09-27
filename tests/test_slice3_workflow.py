@@ -235,7 +235,7 @@ def test_modeling_remodel_stays_in_modeling_and_next_run_fully_rebuilds(
         "review_convergence",
     ]
     assert all(
-        call["payload"]["previous_remodel_findings"] == (finding,)
+        call["payload"]["previous_remodel_findings"] == [finding]
         for call in ai.calls[5:8]
     )
 
@@ -362,7 +362,7 @@ def test_next_modeling_execution_after_answer_rebuilds_all_views_from_new_author
     assert "recommend" not in json.dumps(domain_authority)
 
 
-def test_modeling_ai_failure_does_not_transition_or_persist_partial_results(
+def test_modeling_ai_failure_preserves_validated_checkpoints_without_transition(
     tmp_path: Path,
 ) -> None:
     ai = ScriptedAI(
@@ -378,7 +378,8 @@ def test_modeling_ai_failure_does_not_transition_or_persist_partial_results(
 
     restored = service.status(run_id)
     assert restored.state is WorkflowState.MODELING
-    assert restored.modeling_result is None
+    assert restored.modeling_result is not None
+    assert restored.operation_cursor == "review_convergence"
     assert restored.convergence_result is None
     assert [call["operation"] for call in ai.calls[-4:]] == [
         "derive_domain",

@@ -30,7 +30,8 @@ def test_codex_adapter_requests_strict_schema_and_validates_final_output(
         observed["schema"] = json.loads(schema_path.read_text(encoding="utf-8"))
         observed["schema_name"] = schema_path.name
         output_path.write_text(
-            ConvergencePassOutput(outcome="PASS").model_dump_json(), encoding="utf-8"
+            json.dumps({"result": ConvergencePassOutput(outcome="PASS").model_dump()}),
+            encoding="utf-8",
         )
         return subprocess.CompletedProcess(command, 0, "", "")
 
@@ -54,10 +55,9 @@ def test_codex_adapter_requests_strict_schema_and_validates_final_output(
         "operation": "review_convergence",
         "payload": {"source_prd": "# Product"},
     }
-    assert observed["schema_name"] == "convergence.schema.json"
-    assert observed["schema"] == load_committed_schema("review_convergence")
-    assert observed["schema"]["discriminator"]["propertyName"] == "outcome"
-    assert len(observed["schema"]["oneOf"]) == 3
+    assert observed["schema_name"] == "provider-schema.json"
+    assert observed["schema"]["properties"]["result"]["anyOf"]
+    assert len(observed["schema"]["properties"]["result"]["anyOf"]) == 3
 
 
 def test_codex_adapter_reports_local_validation_failure_with_operation(
@@ -69,7 +69,7 @@ def test_codex_adapter_reports_local_validation_failure_with_operation(
         nonlocal calls
         calls += 1
         output_path = Path(command[command.index("--output-last-message") + 1])
-        output_path.write_text('{"unexpected":true}', encoding="utf-8")
+        output_path.write_text('{"result":{"unexpected":true}}', encoding="utf-8")
         return subprocess.CompletedProcess(command, 0, "", "")
 
     monkeypatch.setattr(subprocess, "run", fake_run)

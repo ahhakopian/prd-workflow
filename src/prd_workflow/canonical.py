@@ -108,14 +108,21 @@ def compose_canonical(
 
     result = ai.invoke(
         operation="compose_canonical",
-        payload={
-            "active_authority": authority,
-            "converged_modeling_result": models.model_dump(mode="json"),
-            "previous_editorial_or_validation_findings": editorial_findings,
-        },
+        payload=compose_payload(authority, models, editorial_findings),
         result_type=CANONICAL_RESULT_TYPE,
     )
     return TypeAdapter(CANONICAL_RESULT_TYPE).validate_python(result)
+
+
+def compose_payload(
+    authority: dict[str, object], models: ModelingResult,
+    editorial_findings: tuple[str, ...],
+) -> dict[str, object]:
+    return {
+        "active_authority": authority,
+        "converged_modeling_result": models.model_dump(mode="json"),
+        "previous_editorial_or_validation_findings": editorial_findings,
+    }
 
 
 def render_markdown(document: CanonicalPRD) -> str:
@@ -547,18 +554,27 @@ def audit_canonical(
 ) -> AuditResult:
     """Run one fresh, independent semantic audit of the exact rendered candidate."""
 
-    result = TypeAdapter(CANONICAL_AUDIT_RESULT_TYPE).validate_python(
-        ai.invoke(
-            operation="audit_canonical",
-            payload={
-                "active_authority": authority,
-                "converged_modeling_result": models.model_dump(mode="json"),
-                "structured_canonical_prd": document.model_dump(mode="json"),
-                "exact_rendered_markdown_candidate": rendered_markdown,
-            },
-            result_type=CANONICAL_AUDIT_RESULT_TYPE,
-        )
-    )
+    return parse_audit(ai.invoke(
+        operation="audit_canonical",
+        payload=audit_payload(authority, models, document, rendered_markdown),
+        result_type=CANONICAL_AUDIT_RESULT_TYPE,
+    ))
+
+
+def audit_payload(
+    authority: dict[str, object], models: ModelingResult,
+    document: CanonicalPRD, rendered_markdown: str,
+) -> dict[str, object]:
+    return {
+        "active_authority": authority,
+        "converged_modeling_result": models.model_dump(mode="json"),
+        "structured_canonical_prd": document.model_dump(mode="json"),
+        "exact_rendered_markdown_candidate": rendered_markdown,
+    }
+
+
+def parse_audit(raw: object) -> AuditResult:
+    result = TypeAdapter(CANONICAL_AUDIT_RESULT_TYPE).validate_python(raw)
     if isinstance(result, AuditPassOutput):
         return AuditResult(status="PASS")
     if isinstance(result, AuditEditorialOutput):

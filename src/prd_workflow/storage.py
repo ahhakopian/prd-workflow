@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import fcntl
 import os
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Iterator
 from uuid import uuid4
 
 from prd_workflow.models import WorkflowRun
@@ -146,6 +149,21 @@ class FileStorage:
         """Return the concrete directory for a run without reading its files."""
 
         return self._run_dir(run_id)
+
+    @contextmanager
+    def lock_run(self, run_id: str) -> Iterator[None]:
+        """Serialize read/check/replace transactions for one existing run."""
+
+        run_dir = self._run_dir(run_id)
+        if not run_dir.is_dir():
+            raise FileNotFoundError(f"Run directory does not exist: {run_dir}")
+        descriptor = os.open(run_dir / ".lock", os.O_CREAT | os.O_RDWR, 0o600)
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            yield
+        finally:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+            os.close(descriptor)
 
     def _run_dir(self, run_id: str) -> Path:
         if not run_id or run_id in {".", ".."} or Path(run_id).name != run_id:

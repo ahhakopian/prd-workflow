@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -34,7 +35,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("--clarification requires --option")
 
     storage = FileStorage()
-    service = WorkflowService(storage, CodexAIExecutor())
+    direct = arguments.command in {"run", "advance"}
+    service = WorkflowService(storage, CodexAIExecutor() if direct else None)
 
     try:
         if arguments.command == "start":
@@ -42,6 +44,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             _print_start(run)
         elif arguments.command == "advance":
             _print_advance(service.advance(arguments.run_id))
+        elif arguments.command == "next":
+            print(json.dumps(service.next(arguments.run_id), ensure_ascii=False))
+        elif arguments.command == "submit":
+            raw = _read_submission(arguments.input)
+            _print_submission(service.submit(arguments.run_id, arguments.task_token, raw))
+        elif arguments.command == "run":
+            outcome = service.run(arguments.run_id, arguments.max_tasks)
+            _print_advance(outcome.run)
+            print(f"completed_tasks: {outcome.completed_tasks}")
+            print(f"stopped_reason: {outcome.reason}")
+            if outcome.reason == "task_limit":
+                return 1
         elif arguments.command == "status":
             _print_status(service.status(arguments.run_id), storage)
         elif arguments.command == "answer":
@@ -76,6 +90,19 @@ def _parser() -> argparse.ArgumentParser:
     advance = commands.add_parser("advance", help="advance exactly one workflow step")
     advance.add_argument("run_id")
 
+    next_command = commands.add_parser("next", help="issue one interactive task")
+    next_command.add_argument("run_id")
+    next_command.add_argument("--json", action="store_true", required=True)
+
+    submit = commands.add_parser("submit", help="validate and commit one task result")
+    submit.add_argument("run_id")
+    submit.add_argument("--task-token", required=True)
+    submit.add_argument("--input", required=True, metavar="FILE_OR_DASH")
+
+    run = commands.add_parser("run", help="run autonomously until pause or terminal state")
+    run.add_argument("run_id")
+    run.add_argument("--max-tasks", type=int, default=50)
+
     status = commands.add_parser("status", help="show operator-relevant run status")
     status.add_argument("run_id")
 
@@ -92,10 +119,35 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _read_submission(path: str) -> object:
+    maximum = 32 * 1024 * 1024
+    if path == "-":
+        data = sys.stdin.buffer.read(maximum + 1)
+    else:
+        with Path(path).open("rb") as source:
+            data = source.read(maximum + 1)
+    if len(data) > maximum:
+        raise ValueError("submission exceeds 32 MiB")
+    return json.loads(
+        data.decode("utf-8"),
+        parse_constant=_reject_json_constant,
+    )
+
+
+def _reject_json_constant(value: str) -> object:
+    raise ValueError(f"invalid JSON constant: {value}")
+
+
+def _print_submission(run: WorkflowRun) -> None:
+    print(f"run_id: {run.run_id}")
+    print(f"state: {run.state.value}")
+    _print_next_action(run)
+
+
 def _print_start(run: WorkflowRun) -> None:
     print(f"run_id: {run.run_id}")
     print(f"state: {run.state.value}")
-    print(f"next: prd advance {run.run_id}")
+    print(f"next: prd next {run.run_id} --json")
 
 
 def _print_advance(run: WorkflowRun) -> None:
@@ -200,11 +252,9 @@ def _print_next_action(run: WorkflowRun) -> None:
         WorkflowState.MODELING,
         WorkflowState.CANONICALIZATION,
     }:
-        print(f"next: prd advance {run.run_id}")
+        print(f"next: prd next {run.run_id} --json")
     elif run.state is WorkflowState.WAITING_HUMAN:
-        decision = _pending_decision(run)
-        if decision is not None:
-            print(f"next: prd answer {run.run_id} {decision.decision_id} ...")
+        print(f"next: prd next {run.run_id} --json")
     elif run.state is WorkflowState.DONE:
         print(f"next: prd handoff {run.run_id}")
 

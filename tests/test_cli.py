@@ -125,7 +125,7 @@ def test_cli_start_prints_intake_run_id_and_next_action(
     assert output.err == ""
     assert output.out.splitlines()[1:] == [
         "state: INTAKE",
-        f"next: prd advance {run_id}",
+        f"next: prd next {run_id} --json",
     ]
     assert FileStorage().load_run(run_id).state is WorkflowState.INTAKE
     assert ai.calls == []

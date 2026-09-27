@@ -193,7 +193,7 @@ def test_validation_failure_stays_in_canonicalization_and_is_reprocessed(
     ]
     assert ai.calls[1]["payload"][
         "previous_editorial_or_validation_findings"
-    ] == failed.diagnostics
+    ] == list(failed.diagnostics)
     assert ai.calls[2]["payload"]["exact_rendered_markdown_candidate"] == (
         render_markdown(corrected)
     )
@@ -234,7 +234,7 @@ def test_editorial_failure_recomposes_and_reaudits_next_candidate(
     ]
     assert ai.calls[2]["payload"][
         "previous_editorial_or_validation_findings"
-    ] == editorial.findings
+    ] == list(editorial.findings)
     assert ai.calls[3]["payload"]["exact_rendered_markdown_candidate"] == (
         render_markdown(second)
     )
@@ -271,7 +271,7 @@ def test_audit_remodel_returns_to_modeling_and_rebuilds_complete_model_set(
         "review_convergence",
     ]
     assert all(
-        call["payload"]["previous_remodel_findings"] == (finding,)
+        call["payload"]["previous_remodel_findings"] == [finding]
         for call in ai.calls[2:5]
     )
 
@@ -315,7 +315,8 @@ def test_validation_pass_without_audit_pass_never_reaches_done(tmp_path: Path) -
 
     restored = service.status(run_id)
     assert restored.state is WorkflowState.CANONICALIZATION
-    assert restored.canonical_candidate is None
+    assert restored.canonical_candidate is not None
+    assert restored.operation_cursor == "audit_canonical"
     assert restored.audit_result is None
     assert not (service.storage.run_directory(run_id) / "canonical-prd.md").exists()
     assert [call["operation"] for call in ai.calls] == [

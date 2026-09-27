@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -518,6 +518,57 @@ class AuditResult(BaseModel):
         return self
 
 
+class ModelingProgress(BaseModel):
+    """Validated checkpoints within one complete modeling cycle."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    product_context: ProductContext | None = None
+    domain: DomainView | None = None
+    capabilities: tuple[CapabilityValue, ...] | None = None
+    architecture: ArchitectureView | None = None
+    deferred_decisions: tuple[Decision, ...] | None = None
+
+
+class PendingTask(BaseModel):
+    """One persisted, replay-protected operation or Human Decision request."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["model", "human"]
+    token: str
+    run_id: str
+    state: WorkflowState
+    operation_cursor: str | None
+    revision: int = Field(ge=0)
+    operation: str | None = None
+    decision_id: str | None = None
+    instruction: str | None = None
+    payload: dict[str, Any] | None = None
+    output_schema: dict[str, Any] | None = None
+    decision: Decision | None = None
+    contract_fingerprint: str
+
+    @model_validator(mode="after")
+    def _validate_task_shape(self) -> Self:
+        if len(self.token) != 64 or any(character not in "0123456789abcdef" for character in self.token):
+            raise ValueError("task token must be 256-bit lowercase hex")
+        if self.kind == "model":
+            if (
+                self.operation is None or self.instruction is None
+                or self.payload is None or self.output_schema is None
+                or self.decision_id is not None or self.decision is not None
+            ):
+                raise ValueError("model task has an invalid request shape")
+        elif (
+            self.decision is None or self.decision_id != self.decision.decision_id
+            or self.operation is not None or self.instruction is not None
+            or self.payload is not None or self.output_schema is not None
+        ):
+            raise ValueError("human task has an invalid request shape")
+        return self
+
+
 class WorkflowRun(BaseModel):
     """The persisted aggregate and sole holder of lifecycle state."""
 
@@ -533,6 +584,10 @@ class WorkflowRun(BaseModel):
     canonical_candidate: CanonicalPRD | None = None
     audit_result: AuditResult | None = None
     diagnostics: tuple[str, ...] = ()
+    revision: int = Field(default=0, ge=0)
+    operation_cursor: str | None = None
+    modeling_progress: ModelingProgress | None = None
+    pending_task: PendingTask | None = None
 
     _validate_run_id = field_validator("run_id")(_non_blank)
 

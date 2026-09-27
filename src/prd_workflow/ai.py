@@ -20,7 +20,7 @@ from prd_workflow.ai_contracts import (
     DomainOutput,
     MaterialDecisionDraft,
 )
-from prd_workflow.models import CanonicalPRD
+from prd_workflow.models import CanonicalPRD, PendingTask
 
 
 ResultT = TypeVar("ResultT")
@@ -92,10 +92,33 @@ class CodexAIExecutor:
                 f"result_type does not match the fixed contract for operation "
                 f"{operation!r}"
             )
+        return self._invoke_prepared(
+            operation=operation, payload=payload, result_type=result_type,
+            instruction=load_prompt(operation), schema=load_committed_schema(operation),
+            use_committed_schema_path=True,
+        )
+
+    def invoke_task(self, task: PendingTask) -> object:
+        """Execute the exact persisted model request issued by WorkflowService."""
+
+        if task.kind != "model" or task.operation is None or task.payload is None:
+            raise ValueError("CodexAIExecutor requires a prepared model task")
+        return self._invoke_prepared(
+            operation=task.operation, payload=task.payload,
+            result_type=result_type_for_operation(task.operation),
+            instruction=task.instruction, schema=task.output_schema,
+            use_committed_schema_path=False,
+        )
+
+    def _invoke_prepared(
+        self, *, operation: str, payload: dict[str, object],
+        result_type: type[ResultT], instruction: str,
+        schema: dict[str, object], use_committed_schema_path: bool,
+    ) -> ResultT:
         adapter = TypeAdapter(result_type)
         request = json.dumps(
             {
-                "instruction": load_prompt(operation),
+                "instruction": instruction,
                 "operation": operation,
                 "payload": payload,
             },
@@ -103,11 +126,33 @@ class CodexAIExecutor:
         )
 
         schema_asset = schema_resource(operation)
-        with resources.as_file(schema_asset) as schema_path, tempfile.TemporaryDirectory(
+        with resources.as_file(schema_asset) as committed_schema_path, tempfile.TemporaryDirectory(
             prefix="prd-codex-"
         ) as temporary:
             directory = Path(temporary)
             output_path = directory / "result.json"
+            schema = json.loads(json.dumps(schema))
+            wrapped = schema.get("type") != "object"
+            schema_path = committed_schema_path
+            if not use_committed_schema_path and not wrapped:
+                schema_path = directory / "task-schema.json"
+                schema_path.write_text(json.dumps(schema, ensure_ascii=False), encoding="utf-8")
+            if wrapped:
+                definitions = schema.pop("$defs", {})
+                schema.pop("discriminator", None)
+                if "oneOf" in schema:
+                    schema["anyOf"] = schema.pop("oneOf")
+                provider_schema = {
+                    "$defs": definitions,
+                    "type": "object",
+                    "properties": {"result": schema},
+                    "required": ["result"],
+                    "additionalProperties": False,
+                }
+                schema_path = directory / "provider-schema.json"
+                schema_path.write_text(
+                    json.dumps(provider_schema, ensure_ascii=False), encoding="utf-8"
+                )
 
             try:
                 completed = subprocess.run(
@@ -146,7 +191,9 @@ class CodexAIExecutor:
 
             try:
                 output = json.loads(output_path.read_text(encoding="utf-8"))
-            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                if wrapped:
+                    output = output["result"]
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as exc:
                 raise RuntimeError(
                     f"AI operation {operation!r} failed during structured-output "
                     f"decoding: {exc}"

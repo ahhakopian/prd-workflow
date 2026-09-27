@@ -41,15 +41,59 @@ def analyze_intake(
     """Return the one intake-blocking Material Decision, or no blocker."""
 
     result = TypeAdapter(INTAKE_RESULT_TYPE).validate_python(
-        ai.invoke(
-            operation="intake",
-            payload={"active_authority": authority},
-            result_type=INTAKE_RESULT_TYPE,
-        )
+        ai.invoke(operation="intake", payload=intake_payload(authority), result_type=INTAKE_RESULT_TYPE)
     )
     if result is None:
         return None
     return material_decision_from_draft(result, WorkflowState.INTAKE)
+
+
+def intake_payload(authority: dict[str, object]) -> dict[str, object]:
+    return {"active_authority": authority}
+
+
+def domain_payload(authority: dict[str, object], prior_findings: tuple[str, ...]) -> dict[str, object]:
+    return {"active_authority": authority, "previous_remodel_findings": prior_findings}
+
+
+def capabilities_payload(
+    authority: dict[str, object], product_context: ProductContext,
+    domain: DomainView, prior_findings: tuple[str, ...],
+) -> dict[str, object]:
+    return {
+        "active_authority": authority,
+        "domain": {"product_context": product_context.model_dump(mode="json"), "view": domain.model_dump(mode="json")},
+        "previous_remodel_findings": prior_findings,
+    }
+
+
+def architecture_payload(
+    authority: dict[str, object], product_context: ProductContext,
+    domain: DomainView, capabilities: tuple[CapabilityValue, ...],
+    prior_findings: tuple[str, ...],
+) -> dict[str, object]:
+    return {
+        **capabilities_payload(authority, product_context, domain, prior_findings),
+        "functional_capabilities": tuple(capability.model_dump(mode="json") for capability in capabilities),
+    }
+
+
+def convergence_payload(authority: dict[str, object], models: ModelingResult) -> dict[str, object]:
+    return {"active_authority": authority, "complete_fresh_modeling_result": models.model_dump(mode="json")}
+
+
+def parse_convergence(result: object) -> ConvergenceResult:
+    result = TypeAdapter(CONVERGENCE_RESULT_TYPE).validate_python(result)
+    if isinstance(result, ConvergencePassOutput):
+        return ConvergenceResult(status="PASS")
+    if isinstance(result, ConvergenceRemodelOutput):
+        return ConvergenceResult(status="FAIL", findings=result.findings, remediation="REMODEL")
+    if isinstance(result, ConvergenceHumanDecisionOutput):
+        return ConvergenceResult(
+            status="FAIL", findings=result.findings, remediation="HUMAN_DECISION",
+            decision=material_decision_from_draft(result.decision, WorkflowState.MODELING),
+        )
+    raise TypeError(f"unsupported Convergence output: {type(result)!r}")
 
 
 def derive_domain(
@@ -62,10 +106,7 @@ def derive_domain(
     result = DomainOutput.model_validate(
         ai.invoke(
             operation="derive_domain",
-            payload={
-                "active_authority": authority,
-                "previous_remodel_findings": prior_findings,
-            },
+            payload=domain_payload(authority, prior_findings),
             result_type=DOMAIN_RESULT_TYPE,
         )
     )
@@ -84,14 +125,7 @@ def derive_capabilities(
     result = CapabilitiesOutput.model_validate(
         ai.invoke(
             operation="derive_capabilities",
-            payload={
-                "active_authority": authority,
-                "domain": {
-                    "product_context": product_context.model_dump(mode="json"),
-                    "view": domain.model_dump(mode="json"),
-                },
-                "previous_remodel_findings": prior_findings,
-            },
+            payload=capabilities_payload(authority, product_context, domain, prior_findings),
             result_type=CAPABILITIES_RESULT_TYPE,
         )
     )
@@ -111,17 +145,7 @@ def derive_architecture(
     result = ArchitectureOutput.model_validate(
         ai.invoke(
             operation="derive_architecture",
-            payload={
-                "active_authority": authority,
-                "domain": {
-                    "product_context": product_context.model_dump(mode="json"),
-                    "view": domain.model_dump(mode="json"),
-                },
-                "functional_capabilities": tuple(
-                    capability.model_dump(mode="json") for capability in capabilities
-                ),
-                "previous_remodel_findings": prior_findings,
-            },
+            payload=architecture_payload(authority, product_context, domain, capabilities, prior_findings),
             result_type=ARCHITECTURE_RESULT_TYPE,
         )
     )
@@ -166,31 +190,7 @@ def review_convergence(
 ) -> ConvergenceResult:
     """Run one fresh review of the complete, freshly derived model set."""
 
-    result = TypeAdapter(CONVERGENCE_RESULT_TYPE).validate_python(
-        ai.invoke(
-            operation="review_convergence",
-            payload={
-                "active_authority": authority,
-                "complete_fresh_modeling_result": models.model_dump(mode="json"),
-            },
-            result_type=CONVERGENCE_RESULT_TYPE,
-        )
-    )
-    if isinstance(result, ConvergencePassOutput):
-        return ConvergenceResult(status="PASS")
-    if isinstance(result, ConvergenceRemodelOutput):
-        return ConvergenceResult(
-            status="FAIL",
-            findings=result.findings,
-            remediation="REMODEL",
-        )
-    if isinstance(result, ConvergenceHumanDecisionOutput):
-        return ConvergenceResult(
-            status="FAIL",
-            findings=result.findings,
-            remediation="HUMAN_DECISION",
-            decision=material_decision_from_draft(
-                result.decision, WorkflowState.MODELING
-            ),
-        )
-    raise TypeError(f"unsupported Convergence output: {type(result)!r}")
+    return parse_convergence(ai.invoke(
+        operation="review_convergence", payload=convergence_payload(authority, models),
+        result_type=CONVERGENCE_RESULT_TYPE,
+    ))
